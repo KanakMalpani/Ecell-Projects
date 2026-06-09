@@ -1,0 +1,17 @@
+# local prep only - not for submission
+LOCAL_DEMO_GUIDE.md
+
+# generated during pipeline run
+data/*.csv
+models/*.joblib
+reports/*.png
+reports/*.csv
+reports/*.json
+
+# training artifacts
+catboost_info/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
