@@ -8,6 +8,9 @@ reports/*.png
 reports/*.csv
 reports/*.json
 
+# demo video output (keep locally for submission upload)
+video/
+
 # training artifacts
 catboost_info/
 __pycache__/

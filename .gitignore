@@ -18,6 +18,7 @@ AI and Automation/reports/*.csv
 AI and Automation/reports/*.json
 AI and Automation/catboost_info/
 AI and Automation/LOCAL_DEMO_GUIDE.md
+AI and Automation/video/
 
 # OS
 .DS_Store
