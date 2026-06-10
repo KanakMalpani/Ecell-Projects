@@ -85,10 +85,23 @@ Deploy the `client/dist` folder to any static host:
 - [Netlify](https://netlify.com)
 - [GitHub Pages](https://pages.github.com) (with `base` config if needed)
 
-Add your live URL here after deployment:
+**Live site:** https://client-sigma-virid.vercel.app
+
+### Vercel environment variable (required for form -> Sheets)
+
+After deploying the Apps Script web app, add this in the Vercel dashboard  
+(Project **client** -> Settings -> Environment Variables):
 
 ```
-Deployed URL: <add-your-link>
+GOOGLE_SCRIPT_URL = https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+```
+
+Or from terminal:
+
+```bash
+cd client
+npx vercel env add GOOGLE_SCRIPT_URL production
+npx vercel deploy --prod
 ```
 
 ## AI prompts

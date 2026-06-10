@@ -46,28 +46,43 @@ export default function Contact() {
     setSubmitting(true);
     setStatus("");
 
-    const scriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+    const payload = {
+      ...form,
+      submittedAt: new Date().toISOString(),
+    };
 
     try {
-      if (scriptUrl) {
-        await fetch(scriptUrl, {
+      const devScriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+      let result;
+      let body;
+
+      if (import.meta.env.DEV && devScriptUrl) {
+        result = await fetch(devScriptUrl, {
           method: "POST",
           mode: "no-cors",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...form,
-            submittedAt: new Date().toISOString(),
-          }),
+          body: JSON.stringify(payload),
         });
-        setStatus("Thank you. Your inquiry was submitted successfully.");
+        body = { message: "Thank you. Your inquiry was submitted successfully." };
+        if (!result.ok && result.type !== "opaque") {
+          throw new Error("Submission failed");
+        }
       } else {
-        setStatus(
-          "Form validated successfully. Add VITE_GOOGLE_SCRIPT_URL to enable Google Sheets automation."
-        );
+        result = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        body = await result.json().catch(() => ({}));
+        if (!result.ok) {
+          throw new Error(body.error || "Submission failed");
+        }
       }
+
+      setStatus(body.message || "Thank you. Your inquiry was submitted successfully.");
       setForm(initialForm);
-    } catch {
-      setStatus("Submission failed. Please try again or email us directly.");
+    } catch (error) {
+      setStatus(error.message || "Submission failed. Please try again or email us directly.");
     } finally {
       setSubmitting(false);
     }

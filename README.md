@@ -14,6 +14,8 @@ E-Cell/
 
 **Task 1:** GNN Logistics Inc. responsive company landing page (React + Tailwind).
 
+**Live demo:** https://client-sigma-virid.vercel.app
+
 See [Tech/README.md](Tech/README.md) for setup, deployment, and deliverables.
 
 ## AI and Automation

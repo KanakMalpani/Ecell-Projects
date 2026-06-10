@@ -1,19 +1,17 @@
 /**
  * GNN Logistics contact form -> Google Sheets
  *
- * Setup:
- * 1. Create a Google Sheet with headers:
- *    Timestamp | Name | Email | Phone | Service | Message
- * 2. Extensions -> Apps Script -> paste this file
- * 3. Set SHEET_NAME and SPREADSHEET_ID
- * 4. Deploy -> New deployment -> Web app
- *    Execute as: Me
- *    Who has access: Anyone
- * 5. Copy deployment URL into client/.env as VITE_GOOGLE_SCRIPT_URL
+ * Deploy as Web App (Execute as: Me, Access: Anyone)
+ * Then set GOOGLE_SCRIPT_URL in Vercel env vars.
  */
 
 const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID";
 const SHEET_NAME = "Inquiries";
+
+function doOptions() {
+  return ContentService.createTextOutput("")
+    .setMimeType(ContentService.MimeType.TEXT);
+}
 
 function doPost(e) {
   try {
@@ -30,11 +28,24 @@ function doPost(e) {
     ]);
 
     return ContentService.createTextOutput(
-      JSON.stringify({ success: true })
+      JSON.stringify({ success: true, message: "Inquiry saved to Google Sheets." })
     ).setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService.createTextOutput(
       JSON.stringify({ success: false, error: error.message })
     ).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function setupSheet() {
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SHEET_NAME);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["Timestamp", "Name", "Email", "Phone", "Service", "Message"]);
   }
 }
