@@ -1,17 +1,28 @@
-# local prep only - not for submission
-LOCAL_DEMO_GUIDE.md
+# Node
+node_modules/
+.env
+dist/
 
-# generated during pipeline run
-data/*.csv
-models/*.joblib
-reports/*.png
-reports/*.csv
-reports/*.json
-
-# training artifacts
-catboost_info/
+# Python
 __pycache__/
 *.pyc
-.ipynb_checkpoints/
 .venv/
 venv/
+.ipynb_checkpoints/
+
+# AI and Automation generated artifacts
+AI and Automation/data/*.csv
+AI and Automation/models/*.joblib
+AI and Automation/reports/*.png
+AI and Automation/reports/*.csv
+AI and Automation/reports/*.json
+AI and Automation/catboost_info/
+AI and Automation/LOCAL_DEMO_GUIDE.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+Tech/pdf_extract.txt
+Tech/pdf_pages/

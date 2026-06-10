@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Module 3 - JavaScript | E-Cell Tech Induction</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>E-Cell Event RSVP</h1>
+      <p>Module 3: Vanilla JavaScript &amp; DOM Manipulation</p>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2>Filter Events</h2>
+        <div class="controls">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="tech">Tech</button>
+          <button class="filter-btn" data-filter="ai">AI &amp; Automation</button>
+          <button class="filter-btn" data-filter="design">Design</button>
+        </div>
+        <ul id="event-list" class="event-list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>RSVP Counter</h2>
+        <p>Registered: <strong id="rsvp-count">0</strong></p>
+        <button id="rsvp-btn" class="primary-btn">Register for Demo Day</button>
+        <p id="rsvp-message" class="message" aria-live="polite"></p>
+      </section>
+
+      <section class="card">
+        <h2>Quick Contact</h2>
+        <form id="contact-form">
+          <label for="contact-name">Name</label>
+          <input id="contact-name" type="text" required />
+          <label for="contact-email">Email</label>
+          <input id="contact-email" type="email" required />
+          <button type="submit" class="primary-btn">Save Locally</button>
+        </form>
+        <ul id="saved-contacts" class="event-list"></ul>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
