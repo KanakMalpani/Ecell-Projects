@@ -8,6 +8,7 @@ const initialForm = {
   phone: "",
   service: "Freight Forwarding",
   message: "",
+  _honeypot: "",
 };
 
 function validate(form) {
@@ -29,7 +30,6 @@ export default function Contact() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -37,55 +37,30 @@ export default function Contact() {
     setErrors((current) => ({ ...current, [name]: "" }));
   }
 
-  async function handleSubmit(event) {
+  function handleSubmit(event) {
     event.preventDefault();
+
+    if (form._honeypot) return;
+
     const nextErrors = validate(form);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    setSubmitting(true);
-    setStatus("");
+    const subject = encodeURIComponent(`GNN Logistics Inquiry - ${form.service}`);
+    const body = encodeURIComponent(
+      [
+        `Name: ${form.name}`,
+        `Email: ${form.email}`,
+        `Phone: ${form.phone || "Not provided"}`,
+        `Service: ${form.service}`,
+        "",
+        form.message,
+      ].join("\n")
+    );
 
-    const payload = {
-      ...form,
-      submittedAt: new Date().toISOString(),
-    };
-
-    try {
-      const devScriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
-      let result;
-      let body;
-
-      if (import.meta.env.DEV && devScriptUrl) {
-        result = await fetch(devScriptUrl, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        body = { message: "Thank you. Your inquiry was submitted successfully." };
-        if (!result.ok && result.type !== "opaque") {
-          throw new Error("Submission failed");
-        }
-      } else {
-        result = await fetch("/api/contact", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        body = await result.json().catch(() => ({}));
-        if (!result.ok) {
-          throw new Error(body.error || "Submission failed");
-        }
-      }
-
-      setStatus(body.message || "Thank you. Your inquiry was submitted successfully.");
-      setForm(initialForm);
-    } catch (error) {
-      setStatus(error.message || "Submission failed. Please try again or email us directly.");
-    } finally {
-      setSubmitting(false);
-    }
+    window.location.href = `mailto:${company.email}?subject=${subject}&body=${body}`;
+    setStatus("Your email app should open with the inquiry ready to send.");
+    setForm(initialForm);
   }
 
   return (
@@ -116,6 +91,16 @@ export default function Contact() {
           className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg"
         >
           <div className="grid gap-4">
+            <input
+              type="text"
+              name="_honeypot"
+              value={form._honeypot}
+              onChange={handleChange}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              className="hidden"
+            />
             <label className="text-sm font-semibold">
               Full Name
               <input
@@ -181,10 +166,9 @@ export default function Contact() {
 
             <button
               type="submit"
-              disabled={submitting}
-              className="rounded-full bg-gnn-red px-6 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
+              className="rounded-full bg-gnn-red px-6 py-3 text-sm font-bold text-white transition hover:bg-red-700"
             >
-              {submitting ? "Submitting..." : "Send Inquiry"}
+              Send Inquiry
             </button>
 
             {status && (

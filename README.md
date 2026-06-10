@@ -6,7 +6,7 @@ Repository for E-Cell domain induction work, organized by vertical.
 
 ```
 E-Cell/
-├── Tech/                # Web Development & MERN Stack induction
+├── Tech/                # Web Development - Task 1 landing page
 └── AI and Automation/   # Machine Learning & automation induction
 ```
 

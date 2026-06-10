@@ -21,7 +21,6 @@ Develop a modern, responsive landing page for **GNN Logistics Inc.** that showca
 | Testimonials | Done | `client/src/components/Testimonials.jsx` |
 | Contact / inquiry form | Done | `client/src/components/Contact.jsx` |
 | Form validation | Done | `Contact.jsx` |
-| Google Sheets automation | Ready | `google-apps-script/Code.gs` + `VITE_GOOGLE_SCRIPT_URL` |
 | Social media links | Done | `client/src/components/Footer.jsx` |
 | Footer with company info | Done | `client/src/components/Footer.jsx` |
 | Loading / motion animations | Done | Framer Motion |
@@ -32,14 +31,12 @@ Develop a modern, responsive landing page for **GNN Logistics Inc.** that showca
 - React (Vite)
 - Tailwind CSS
 - Framer Motion
-- Google Apps Script (form -> Sheets)
 
 ## Project structure
 
 ```
 Tech/
 ├── client/                  # Landing page app
-├── google-apps-script/      # Sheets automation script
 ├── E-cell Tech Domain Task-1.pdf
 ├── Tech Resources ( Ecell Inductions ).pdf
 ├── AI_PROMPTS.md
@@ -51,7 +48,6 @@ Tech/
 ```bash
 cd client
 npm install
-cp .env.example .env
 npm run dev
 ```
 
@@ -65,49 +61,19 @@ npm run build
 npm run preview
 ```
 
-## Google Sheets automation
+## Contact form
 
-1. Create a Google Sheet with columns: `Timestamp, Name, Email, Phone, Service, Message`
-2. Open **Extensions -> Apps Script**
-3. Paste `google-apps-script/Code.gs` and set `SPREADSHEET_ID`
-4. Deploy as **Web app** (execute as you, access: anyone)
-5. Put the deployment URL in `client/.env`:
-
-```env
-VITE_GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
-```
+The form validates input client-side, then opens the user's email app with a pre-filled message to `contact@gnnlogistics.com`. No backend or Google Sheets setup is required.
 
 ## Deployment
 
-Deploy the `client/dist` folder to any static host:
-
-- [Vercel](https://vercel.com)
-- [Netlify](https://netlify.com)
-- [GitHub Pages](https://pages.github.com) (with `base` config if needed)
-
 **Live site:** https://client-sigma-virid.vercel.app
-
-### Vercel environment variable (required for form -> Sheets)
-
-After deploying the Apps Script web app, add this in the Vercel dashboard  
-(Project **client** -> Settings -> Environment Variables):
-
-```
-GOOGLE_SCRIPT_URL = https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
-```
-
-Or from terminal:
 
 ```bash
 cd client
-npx vercel env add GOOGLE_SCRIPT_URL production
 npx vercel deploy --prod
 ```
 
 ## AI prompts
 
 See [AI_PROMPTS.md](AI_PROMPTS.md) for the prompts used during development.
-
-## Note on earlier work
-
-An earlier version in this repo built a MERN club demo. That did **not** match Task 1. The landing page in `client/` is the corrected submission. The old `server/` folder is deprecated.

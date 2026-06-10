@@ -6,8 +6,12 @@
 
 ## Prompt 2 - Landing page build
 
-> Build a responsive React + Tailwind landing page for GNN Logistics Inc. with hero CTA, company overview, services, testimonials, validated contact form, Google Sheets automation hook, social links, footer, loading animations, and hover micro-interactions.
+> Build a responsive React + Tailwind landing page for GNN Logistics Inc. with hero CTA, company overview, services, testimonials, validated contact form, social links, footer, loading animations, and hover micro-interactions.
 
 ## Prompt 3 - Deliverables
 
-> Include setup instructions, Google Apps Script sample for form automation, `.env.example`, and document the AI prompts used for submission.
+> Include setup instructions and document the AI prompts used for submission.
+
+## Prompt 4 - Contact form simplification
+
+> Remove Google Sheets integration. Use a validated client-side form that opens the user's email app with a pre-filled inquiry.
