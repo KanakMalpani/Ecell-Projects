@@ -1,71 +1,100 @@
-# E-Cell Tech - Web Development Induction
+# E-Cell Tech Domain - Task 1
 
-Complete implementation of the **Web Development Learning Roadmap** from `Tech Resources ( Ecell Inductions ).pdf`.
+**GNN Logistics Inc. Company Landing Page**
 
-This folder demonstrates progression from static HTML/CSS/JavaScript pages to a full **MERN** application themed with E-Cell colors (`#FFB800`, `#000000`, `#FFFFFF`).
+Task brief: [`E-cell Tech Domain Task-1.pdf`](E-cell%20Tech%20Domain%20Task-1.pdf)
 
-## Roadmap coverage
+Learning resources (separate reference): [`Tech Resources ( Ecell Inductions ).pdf`](Tech%20Resources%20(%20Ecell%20Inductions%20).pdf)
 
-| Module | Folder / Feature | What was built |
-|--------|------------------|----------------|
-| 1. HTML | `modules/01-html/` | Semantic page with nav, table, and form |
-| 2. CSS | `modules/02-css/` | Flexbox cards, CSS Grid calendar, club theme |
-| 3. JavaScript | `modules/03-javascript/` | DOM filters, RSVP counter, localStorage |
-| 4. React | `client/` | SPA with routing and reusable components |
-| 5. Node & Express | `server/` | REST API for events, applications, resources |
-| 6. MongoDB | `server/src/models/` | Mongoose schemas and persistence |
-| 7. MERN Stack | `client/` + `server/` | Integrated frontend, backend, and database |
-| 8. Git & GitHub | repository root | Version control with `Tech/` and `AI and Automation/` split |
+## Objective
+
+Develop a modern, responsive landing page for **GNN Logistics Inc.** that showcases brand, services, testimonials, and a contact inquiry flow.
+
+## Task checklist
+
+| Requirement | Status | Location |
+|-------------|--------|----------|
+| Responsive design (desktop/tablet/mobile) | Done | Tailwind responsive grids + mobile nav |
+| Hero section with CTA | Done | `client/src/components/Hero.jsx` |
+| Company overview & mission | Done | `client/src/components/About.jsx` |
+| Services showcase | Done | `client/src/components/Services.jsx` |
+| Testimonials | Done | `client/src/components/Testimonials.jsx` |
+| Contact / inquiry form | Done | `client/src/components/Contact.jsx` |
+| Form validation | Done | `Contact.jsx` |
+| Google Sheets automation | Ready | `google-apps-script/Code.gs` + `VITE_GOOGLE_SCRIPT_URL` |
+| Social media links | Done | `client/src/components/Footer.jsx` |
+| Footer with company info | Done | `client/src/components/Footer.jsx` |
+| Loading / motion animations | Done | Framer Motion |
+| Hover effects | Done | Service cards + buttons |
+
+## Tech stack
+
+- React (Vite)
+- Tailwind CSS
+- Framer Motion
+- Google Apps Script (form -> Sheets)
 
 ## Project structure
 
 ```
 Tech/
-├── modules/          # Static HTML, CSS, JS demos (Modules 1-3)
-├── client/           # React frontend (Modules 4 & 7)
-├── server/           # Express + MongoDB API (Modules 5-7)
-└── Tech Resources ( Ecell Inductions ).pdf
+├── client/                  # Landing page app
+├── google-apps-script/      # Sheets automation script
+├── E-cell Tech Domain Task-1.pdf
+├── Tech Resources ( Ecell Inductions ).pdf
+├── AI_PROMPTS.md
+└── README.md
 ```
 
-## Prerequisites
-
-- Node.js 18+
-- MongoDB running locally (or MongoDB Atlas URI)
-
-## Quick start
-
-### 1. Backend
-
-```bash
-cd server
-cp .env.example .env
-npm install
-npm run seed
-npm run dev
-```
-
-API: http://localhost:5000/api/health
-
-### 2. Frontend
+## Setup
 
 ```bash
 cd client
-cp .env.example .env
 npm install
+cp .env.example .env
 npm run dev
 ```
 
-App: http://localhost:5173
+Open http://localhost:5173
 
-## App features
+### Production build
 
-- **Home** - roadmap overview and induction summary
-- **Modules** - links to static HTML/CSS/JS demos
-- **Events** - view and create club events (API + MongoDB)
-- **Resources** - learning links from the induction PDF
-- **Join** - domain application form saved to MongoDB
+```bash
+cd client
+npm run build
+npm run preview
+```
 
-## Notes
+## Google Sheets automation
 
-- Static demos are also copied to `client/public/modules/` for easy access during development.
-- If MongoDB is not running, the API starts but database routes will fail until connected.
+1. Create a Google Sheet with columns: `Timestamp, Name, Email, Phone, Service, Message`
+2. Open **Extensions -> Apps Script**
+3. Paste `google-apps-script/Code.gs` and set `SPREADSHEET_ID`
+4. Deploy as **Web app** (execute as you, access: anyone)
+5. Put the deployment URL in `client/.env`:
+
+```env
+VITE_GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+```
+
+## Deployment
+
+Deploy the `client/dist` folder to any static host:
+
+- [Vercel](https://vercel.com)
+- [Netlify](https://netlify.com)
+- [GitHub Pages](https://pages.github.com) (with `base` config if needed)
+
+Add your live URL here after deployment:
+
+```
+Deployed URL: <add-your-link>
+```
+
+## AI prompts
+
+See [AI_PROMPTS.md](AI_PROMPTS.md) for the prompts used during development.
+
+## Note on earlier work
+
+An earlier version in this repo built a MERN club demo. That did **not** match Task 1. The landing page in `client/` is the corrected submission. The old `server/` folder is deprecated.

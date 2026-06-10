@@ -12,13 +12,9 @@ E-Cell/
 
 ## Tech
 
-Full MERN stack project covering the web development roadmap:
+**Task 1:** GNN Logistics Inc. responsive company landing page (React + Tailwind).
 
-- Static HTML, CSS, and JavaScript modules
-- React frontend with E-Cell branding
-- Express + MongoDB backend
-
-See [Tech/README.md](Tech/README.md) for setup and run instructions.
+See [Tech/README.md](Tech/README.md) for setup, deployment, and deliverables.
 
 ## AI and Automation
 
