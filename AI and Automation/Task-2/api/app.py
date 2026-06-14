@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import logging
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from src.orchestrate import RAGPipeline, result_to_dict, save_pipeline_state
 from src.utils import load_config, resolve_path
 
+logger = logging.getLogger("api")
 config = load_config()
 state_path = resolve_path(config["paths"]["state_dir"]) / "pipeline_state.json"
 
@@ -35,7 +36,12 @@ app = FastAPI(
 
 
 class QueryRequest(BaseModel):
-    query: str = Field(..., min_length=3, description="Natural language question")
+    query: str = Field(
+        ...,
+        min_length=3,
+        max_length=2000,
+        description="Natural language question",
+    )
 
 
 class SourceItem(BaseModel):
@@ -60,16 +66,19 @@ def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "active_pipeline": ACTIVE_MODE,
-        "vector_store": config["paths"]["vector_store_dir"],
     }
 
 
 @app.post("/query", response_model=QueryResponse)
 def query_endpoint(request: QueryRequest) -> QueryResponse:
     try:
-        result = pipeline.query(request.query)
+        result = pipeline.query(request.query.strip())
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.exception("Query failed")
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while processing the query.",
+        ) from exc
 
     payload = result_to_dict(result)
     return QueryResponse(

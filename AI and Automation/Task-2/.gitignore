@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 __pycache__/
 *.pyc
 .venv/
@@ -13,3 +15,7 @@ reports/*.csv
 *.egg-info/
 .DS_Store
 pdf_extract.txt
+*.pem
+*.key
+credentials.json
+secrets.json

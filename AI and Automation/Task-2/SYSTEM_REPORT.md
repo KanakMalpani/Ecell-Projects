@@ -107,7 +107,7 @@ Metadata stored per chunk: `source_file`, `doc_type`, `section_hint`, `token_cou
 | api_llm | 0.630 | 0.709 | 0.685 | 0.750 | 5140 |
 | **reranked_gemini** | **0.630** | **0.698** | **0.703** | **0.833** | **5071** |
 
-*Re-run `python run_pipeline.py` after configuring GEMINI_API_KEY or Ollama for live LLM answers.*
+*Re-run `python run_pipeline.py` with Ollama running for live LLM answers.*
 
 ### Selected configuration
 
@@ -128,8 +128,7 @@ Metadata stored per chunk: `source_file`, `doc_type`, `section_hint`, `token_cou
 
 1. **PDF layout-heavy docs** - Scanned PDFs without OCR are not supported; text-based PDFs only.
 2. **Faithfulness proxy** - Embedding-based F score approximates groundedness; human eval recommended for production.
-3. **Ollama dependency** - `local_llm` requires Ollama running; falls back to retrieval-only summary if unavailable.
-4. **Gemini API** - Requires `GEMINI_API_KEY`; pipeline degrades to Ollama/fallback without it.
+3. **Ollama dependency** - Requires Ollama running locally; falls back to retrieval-only summary if unavailable.
 
 ---
 
