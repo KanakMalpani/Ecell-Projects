@@ -1,0 +1,35 @@
+STANDARD OPERATING PROCEDURE: INCIDENT RESPONSE
+SOP-SEC-IR-001 | Version 3.0 | Owner: Security Operations
+
+INCIDENT CLASSIFICATION
+P1 - Critical: Active breach, ransomware encryption, complete service outage. Response: 15 minutes.
+P2 - High: Suspected compromise, partial outage, data exfiltration attempt. Response: 1 hour.
+P3 - Medium: Policy violation, malware on single endpoint, phishing attempt. Response: 4 hours.
+P4 - Low: False positive, informational alert. Response: 24 hours.
+
+INCIDENT RESPONSE PHASES
+Phase 1 - Detection & Triage: SOC analyst validates alert, assigns severity, creates incident ticket (INC-YYYY-NNNNN).
+Phase 2 - Containment: Isolate affected systems, preserve forensic evidence, block malicious IPs/domains.
+Phase 3 - Eradication: Remove malware, patch vulnerabilities, reset compromised credentials.
+Phase 4 - Recovery: Restore from clean backups, verify system integrity, monitor for re-infection.
+Phase 5 - Post-Incident Review: Root cause analysis within 5 business days, update runbooks.
+
+FORENSIC EVIDENCE HANDLING
+- Do not power off affected machines unless actively spreading malware
+- Capture memory dump before reboot when possible
+- Chain of custody form (Form SEC-401) required for all evidence transfers
+- Evidence retention: 1 year minimum for P1/P2 incidents
+
+COMMUNICATION PROTOCOL
+Internal: Incident commander notifies executive team for P1/P2 within 30 minutes.
+External: Legal and PR must approve all customer/regulatory communications.
+Regulatory: GDPR breaches reported within 72 hours (see COMP-GDPR-001).
+
+TOOLS
+- SIEM: Splunk Enterprise (alerts dashboard)
+- EDR: CrowdStrike Falcon
+- Ticketing: ServiceNow Security Module
+- Communication: Dedicated Slack channel #incident-response
+
+TABLETOP EXERCISES
+Quarterly tabletop exercises are mandatory for SOC team and incident commanders. Next scheduled: Q2 2024.

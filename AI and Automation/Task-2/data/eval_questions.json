@@ -1,0 +1,74 @@
+[
+  {
+    "id": "q01",
+    "query": "What is the minimum password length required by the security policy?",
+    "expected_answer_contains": ["14 characters"],
+    "relevant_doc": "corporate_security_policy.txt"
+  },
+  {
+    "id": "q02",
+    "query": "How quickly must a security incident be reported to the SOC?",
+    "expected_answer_contains": ["1 hour"],
+    "relevant_doc": "corporate_security_policy.txt"
+  },
+  {
+    "id": "q03",
+    "query": "What training must new hires complete within 5 business days?",
+    "expected_answer_contains": ["Information Security Fundamentals", "Data Privacy", "Code of Conduct"],
+    "relevant_doc": "employee_onboarding_sop.txt"
+  },
+  {
+    "id": "q04",
+    "query": "What is the SLA for standard role access provisioning during onboarding?",
+    "expected_answer_contains": ["24 hours"],
+    "relevant_doc": "employee_onboarding_sop.txt"
+  },
+  {
+    "id": "q05",
+    "query": "Within how many days must GDPR breach be reported to the Data Protection Authority?",
+    "expected_answer_contains": ["72 hours"],
+    "relevant_doc": "gdpr_compliance_regulation.txt"
+  },
+  {
+    "id": "q06",
+    "query": "How long are employee records retained after termination under GDPR policy?",
+    "expected_answer_contains": ["7 years"],
+    "relevant_doc": "gdpr_compliance_regulation.txt"
+  },
+  {
+    "id": "q07",
+    "query": "What should I do if VPN shows Authentication Failed due to locked account?",
+    "expected_answer_contains": ["helpdesk", "unlock"],
+    "relevant_doc": "vpn_troubleshooting_log.txt"
+  },
+  {
+    "id": "q08",
+    "query": "Which UDP ports are required for VPN connectivity?",
+    "expected_answer_contains": ["500", "4500"],
+    "relevant_doc": "vpn_troubleshooting_log.txt"
+  },
+  {
+    "id": "q09",
+    "query": "What is the response time SLA for a P1 critical security incident?",
+    "expected_answer_contains": ["15 minutes"],
+    "relevant_doc": "incident_response_sop.txt"
+  },
+  {
+    "id": "q10",
+    "query": "How many days per week can eligible employees work remotely?",
+    "expected_answer_contains": ["3 days"],
+    "relevant_doc": "remote_work_policy.txt"
+  },
+  {
+    "id": "q11",
+    "query": "What is the monthly internet stipend for remote workers?",
+    "expected_answer_contains": ["$50"],
+    "relevant_doc": "remote_work_policy.txt"
+  },
+  {
+    "id": "q12",
+    "query": "What MFA requirement applies to remote access?",
+    "expected_answer_contains": ["mandatory"],
+    "relevant_doc": "corporate_security_policy.txt"
+  }
+]

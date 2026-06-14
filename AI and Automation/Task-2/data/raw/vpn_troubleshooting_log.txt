@@ -1,0 +1,33 @@
+TECHNICAL TROUBLESHOOTING LOG: VPN CONNECTIVITY ISSUES
+Log Category: NET-VPN | Last Updated: March 2024
+
+SYMPTOM: VPN client fails to connect with error "Authentication Failed"
+CAUSE 1: Expired or incorrect credentials
+RESOLUTION: Reset password via self-service portal. Ensure MFA token is synchronized (check time drift on authenticator app).
+CAUSE 2: Account locked after 5 failed attempts
+RESOLUTION: Contact IT helpdesk (helpdesk@company.com) to unlock account. Lockout duration: 30 minutes auto-unlock or immediate manual unlock.
+CAUSE 3: Certificate expired on corporate laptop
+RESOLUTION: Run "certmgr --renew" from terminal or visit internal PKI portal at https://pki.internal.company.com
+
+SYMPTOM: VPN connects but internal resources unreachable
+CAUSE 1: Split tunnel misconfiguration (should be disabled per security policy)
+RESOLUTION: Verify VPN profile uses full tunnel mode. Check routing table with "route print" on Windows or "netstat -rn" on macOS.
+CAUSE 2: DNS resolution failure for internal domains
+RESOLUTION: Confirm VPN pushes DNS servers 10.0.1.1 and 10.0.1.2. Flush DNS cache: "ipconfig /flushdns" (Windows) or "sudo dscacheutil -flushcache" (macOS).
+CAUSE 3: Firewall blocking VPN traffic on home network
+RESOLUTION: VPN requires UDP ports 500, 4500, and TCP 443. Test with mobile hotspot to isolate home router issues.
+
+SYMPTOM: Slow VPN performance / high latency
+CAUSE 1: Connected to distant VPN gateway
+RESOLUTION: Select nearest gateway: US-East (vpn-us-east.internal), EU-West (vpn-eu-west.internal), APAC (vpn-apac.internal).
+CAUSE 2: ISP throttling or packet loss
+RESOLUTION: Run traceroute to vpn gateway. If packet loss exceeds 5%, recommend wired connection over Wi-Fi.
+
+ESCALATION PATH
+Level 1: IT Helpdesk (helpdesk@company.com, ext. 4400) - SLA 4 hours
+Level 2: Network Engineering (netops@company.com) - SLA 8 hours
+Level 3: Infrastructure Manager - Critical outages only
+
+KNOWN ISSUES
+- Windows 11 23H2: Update VPN client to version 5.2.1 or later (KB-VPN-2024-03)
+- macOS Sonoma: Disable iCloud Private Relay when using corporate VPN

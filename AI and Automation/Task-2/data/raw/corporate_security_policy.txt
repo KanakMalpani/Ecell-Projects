@@ -1,0 +1,27 @@
+ENTERPRISE IT SECURITY POLICY FRAMEWORK
+Document ID: POL-SEC-2024-001 | Version 2.1 | Effective: January 2024
+
+1. PURPOSE
+This policy establishes mandatory security controls for all employees, contractors, and third-party vendors accessing organizational information systems.
+
+2. PASSWORD REQUIREMENTS
+All user accounts must use passwords with a minimum length of 14 characters. Passwords must include uppercase letters, lowercase letters, numbers, and special characters. Passwords must be rotated every 90 days. Multi-factor authentication (MFA) is mandatory for all remote access and privileged accounts.
+
+3. DATA CLASSIFICATION
+Organizational data is classified into four tiers:
+- Public: Information approved for external release
+- Internal: Standard business data for employee use only
+- Confidential: Customer data, financial records, and HR information
+- Restricted: Trade secrets, encryption keys, and regulated health data (PHI)
+
+4. INCIDENT REPORTING
+Security incidents must be reported to the Security Operations Center (SOC) within 1 hour of discovery via the incident portal or hotline ext. 9911. Critical incidents (data breach, ransomware) require immediate escalation to the CISO and legal counsel.
+
+5. REMOTE ACCESS
+Remote access is permitted only through the corporate VPN using certificate-based authentication. Split tunneling is prohibited. Personal devices may not access internal systems unless enrolled in Mobile Device Management (MDM).
+
+6. ACCEPTABLE USE
+Employees may not install unauthorized software, share credentials, or use corporate systems for cryptocurrency mining. Violations may result in disciplinary action up to and including termination.
+
+7. POLICY REVIEW
+This policy is reviewed annually by the Information Security Committee. Last review date: December 2023. Next review: December 2024.

@@ -1,0 +1,32 @@
+CORPORATE ACCEPTABLE USE AND REMOTE WORK POLICY
+Document ID: POL-HR-RW-2024 | Version 1.2
+
+REMOTE WORK ELIGIBILITY
+Employees in eligible roles may work remotely up to 3 days per week with manager approval. Fully remote arrangements require VP-level approval and HR documentation.
+
+HOME OFFICE REQUIREMENTS
+- Dedicated workspace with reliable internet (minimum 25 Mbps download)
+- Ergonomic chair and desk setup (expense reimbursement up to $500 annually)
+- Corporate VPN must be active during all work hours
+- Webcam required for video meetings
+
+EQUIPMENT POLICY
+Company-provided laptops remain company property. Employees must not install personal software that conflicts with MDM policies. Lost or stolen devices must be reported within 2 hours to IT and Security.
+
+WORKING HOURS AND AVAILABILITY
+Core collaboration hours: 10:00 AM - 3:00 PM in employee's local timezone. Employees must respond to Slack messages within 2 hours during business hours.
+
+EXPENSE REIMBURSEMENT
+Eligible expenses: internet stipend ($50/month), co-working space (pre-approved, max $300/month), office supplies. Submit via expense portal within 30 days with receipts.
+
+DATA PROTECTION FOR REMOTE WORK
+Confidential and Restricted data must not be stored on personal devices or cloud services. Use only approved tools: Google Drive (corporate), Confluence, and encrypted USB drives (IT-issued only).
+
+PERFORMANCE EXPECTATIONS
+Remote employees are evaluated on the same criteria as in-office staff. Managers conduct monthly 1:1 check-ins and quarterly performance reviews.
+
+POLICY VIOLATIONS
+Working from unauthorized locations (public cafes without privacy screen), sharing screen with unauthorized persons during confidential calls, or disabling VPN during work hours constitutes a policy violation.
+
+CONTACT
+HR Remote Work Team: remote-work@company.com

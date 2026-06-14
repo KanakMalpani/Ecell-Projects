@@ -1,0 +1,37 @@
+COMPLIANCE REGULATION SUMMARY: GDPR DATA PROCESSING
+Regulation Reference: EU-GDPR-2016/679 | Compliance Doc: COMP-GDPR-001
+
+LEGAL BASIS FOR PROCESSING
+The organization processes personal data under the following legal bases as defined in GDPR Article 6:
+- Contract performance (employee and customer contracts)
+- Legitimate interest (fraud prevention, network security)
+- Legal obligation (tax reporting, regulatory filings)
+- Consent (marketing communications, optional analytics)
+
+DATA SUBJECT RIGHTS
+Individuals have the right to:
+1. Access their personal data (response within 30 days)
+2. Rectification of inaccurate data (within 30 days)
+3. Erasure ("right to be forgotten") where legally applicable
+4. Data portability in machine-readable format (JSON or CSV)
+5. Object to processing for direct marketing
+6. Lodge a complaint with the supervisory authority
+
+DATA RETENTION SCHEDULE
+- Employee records: 7 years after termination
+- Customer transaction data: 5 years after last transaction
+- Marketing consent records: 3 years after consent withdrawal
+- Server access logs: 90 days
+- Security incident records: 7 years
+
+CROSS-BORDER TRANSFERS
+Personal data may only be transferred outside the EEA using Standard Contractual Clauses (SCCs) approved by the European Commission, or to countries with adequacy decisions.
+
+BREACH NOTIFICATION
+Personal data breaches affecting EU residents must be reported to the relevant Data Protection Authority within 72 hours of becoming aware. Affected individuals must be notified without undue delay when the breach poses high risk to their rights.
+
+DATA PROTECTION OFFICER
+Contact: dpo@company.com | Phone: +44 20 7946 0958
+
+PRIVACY IMPACT ASSESSMENTS
+A DPIA is mandatory before launching any new processing activity that involves: large-scale processing of special category data, systematic monitoring, or automated decision-making with legal effects.

@@ -1,0 +1,39 @@
+# RAG pipeline configuration
+paths:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  vector_store_dir: models/vector_store
+  state_dir: models/state
+  reports_dir: reports
+
+chunking:
+  chunk_size: 512        # tokens (approx via tiktoken cl100k_base)
+  chunk_overlap: 64      # token overlap between consecutive chunks
+  min_chunk_chars: 100
+
+embedding:
+  model_name: sentence-transformers/all-MiniLM-L6-v2
+  batch_size: 32
+
+retrieval:
+  top_k: 8               # initial vector search candidates
+  rerank_top_k: 4        # chunks passed to LLM after reranking
+  similarity_threshold: 0.25
+
+llm:
+  provider: ollama
+  ollama_model: llama3.1:latest
+  ollama_base_url: http://localhost:11434
+  ollama_timeout_seconds: 120
+  temperature: 0.1
+  max_output_tokens: 512
+
+evaluation:
+  eval_questions_file: data/eval_questions.json
+  default_pipeline: reranked_local
+
+anti_hallucination:
+  require_source_citation: true
+  abstain_phrase: "I cannot find sufficient information in the provided documents to answer this question."
+  min_context_similarity: 0.30
+  max_context_tokens: 3000

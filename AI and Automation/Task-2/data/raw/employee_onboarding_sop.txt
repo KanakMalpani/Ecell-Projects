@@ -1,0 +1,34 @@
+STANDARD OPERATING PROCEDURE: EMPLOYEE ONBOARDING
+SOP-HR-ONB-003 | Version 1.4 | Owner: Human Resources
+
+SCOPE
+This SOP covers the end-to-end onboarding process for full-time employees joining the organization.
+
+PRE-ARRIVAL (T-5 Business Days)
+1. HR creates employee record in the HRIS system and assigns employee ID.
+2. IT provisions laptop, email account, and badge access based on role template.
+3. Hiring manager submits equipment and software access request form (Form IT-102).
+
+DAY 1 CHECKLIST
+- 09:00: Welcome session with HR representative in Conference Room B
+- 09:30: IT setup session - laptop configuration, MFA enrollment, VPN installation
+- 11:00: Security awareness training (mandatory, 45 minutes)
+- 13:00: Department orientation with hiring manager
+- 15:00: Benefits enrollment deadline briefing
+
+ACCESS PROVISIONING
+Standard employees receive: email, Slack, Google Workspace, Confluence (read), Jira (project-specific).
+Managers additionally receive: expense approval portal, performance review system access.
+Engineers additionally receive: GitHub organization membership, AWS sandbox account (dev only).
+
+COMPLIANCE TRAINING
+All new hires must complete within 5 business days:
+- Information Security Fundamentals (ISF-101)
+- Data Privacy and GDPR Awareness (DPG-201)
+- Code of Conduct Acknowledgment (signed electronically)
+
+OFFBOARDING REFERENCE
+When an employee departs, IT must revoke all access within 4 hours of termination notification. See SOP-HR-OFF-002 for full offboarding procedure.
+
+ESCALATION
+Onboarding issues should be escalated to onboarding@company.com. SLA for access provisioning: 24 hours for standard roles, 48 hours for custom access requests.
