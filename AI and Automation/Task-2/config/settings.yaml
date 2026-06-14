@@ -22,7 +22,7 @@ retrieval:
 
 llm:
   provider: ollama
-  ollama_model: llama3.1:latest
+  ollama_model: qwen2.5:7b
   ollama_base_url: http://localhost:11434
   ollama_timeout_seconds: 120
   temperature: 0.1

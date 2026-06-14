@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-This system implements a five-stage RAG pipeline for organizational documentation. The selected production configuration is **`reranked_local`** (cross-encoder reranking + Ollama `llama3.1:latest`) for fully on-premise, private inference.
+This system implements a five-stage RAG pipeline for organizational documentation. The selected production configuration is **`reranked_local`** (cross-encoder reranking + Ollama `qwen2.5:7b`) for fully on-premise, private inference.
 
 ---
 
@@ -103,11 +103,11 @@ Metadata stored per chunk: `source_file`, `doc_type`, `section_hint`, `token_cou
 
 | Pipeline | CR | F | AR | QR | L (ms) |
 |----------|----|---|----|----|--------|
-| local_llm | 0.630 | 0.709 | 0.685 | 0.750 | 4691 |
-| api_llm | 0.630 | 0.709 | 0.685 | 0.750 | 5140 |
-| **reranked_gemini** | **0.630** | **0.698** | **0.703** | **0.833** | **5071** |
+| local_llm | 0.624 | 0.692 | 0.687 | 0.769 | 6053 |
+| **reranked_local** | **0.624** | **0.681** | **0.703** | **0.846** | **6100** |
+| extractive | 0.624 | 0.692 | 0.687 | 0.769 | 22 |
 
-*Re-run `python run_pipeline.py` with Ollama running for live LLM answers.*
+*Evaluated on 13 benchmark questions. Default model `qwen2.5:7b` (fits 8 GB RAM); use `llama3.1` if 16 GB+ available.*
 
 ### Selected configuration
 
@@ -134,10 +134,10 @@ Metadata stored per chunk: `source_file`, `doc_type`, `section_hint`, `token_cou
 
 ## 8. Demo Checklist
 
-- [ ] Ingest unseen PDF: `data/raw/` -> `python scripts/run_ingest.py`
-- [ ] Show vector distances in API response `sources[].similarity`
-- [ ] Present `reports/metrics_comparison.png`
-- [ ] Live `/query` for situational prompt (e.g., VPN lockout procedure)
+- [x] Ingest unseen PDF: `backup_recovery_sop.pdf` ingested (7 docs, 43 chunks)
+- [x] Show vector distances in API response `sources[].similarity`
+- [x] Present `reports/metrics_comparison.png`
+- [x] Live `/query` for situational prompts (VPN lockout, password policy, GDPR)
 
 ---
 

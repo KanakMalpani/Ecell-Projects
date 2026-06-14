@@ -70,5 +70,11 @@
     "query": "What MFA requirement applies to remote access?",
     "expected_answer_contains": ["mandatory"],
     "relevant_doc": "corporate_security_policy.txt"
+  },
+  {
+    "id": "q13",
+    "query": "What is the RTO for Tier-1 systems in the backup recovery SOP?",
+    "expected_answer_contains": ["1 hour", "RTO"],
+    "relevant_doc": "backup_recovery_sop.pdf"
   }
 ]

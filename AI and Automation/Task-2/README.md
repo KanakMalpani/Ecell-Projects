@@ -35,11 +35,11 @@ Task-2/
 - [Ollama](https://ollama.com) installed and running
 
 ```bash
-ollama pull llama3.1
+ollama pull qwen2.5:7b
 ollama list
 ```
 
-Default model: `llama3.1:latest` (set in `config/settings.yaml`)
+Default model: `qwen2.5:7b` (set in `config/settings.yaml`). Use `llama3.1:latest` only if you have 16 GB+ system RAM.
 
 ## Setup
 
@@ -160,5 +160,13 @@ python scripts/run_embed.py
 ## Deliverables
 
 1. Source code (this folder)
-2. System report (`SYSTEM_REPORT.md`)
-3. Live demo via FastAPI `/query`
+2. System report (`SYSTEM_REPORT.md` + `submission/SYSTEM_REPORT.pdf`)
+3. Presentation (`submission/Task-2-Presentation.pdf`)
+4. Live demo via FastAPI `/query`
+
+Generate submission PDFs after evaluation:
+
+```bash
+python scripts/run_evaluate.py
+python scripts/generate_submission_pdfs.py
+```
