@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: ecell-commerce
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx prisma migrate deploy && npx tsx prisma/seed.ts && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: JWT_SECRET
+        generateValue: true

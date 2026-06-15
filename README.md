@@ -1,13 +1,17 @@
 # E-Cell NIT Trichy - Induction Projects
 
-Repository for E-Cell domain induction work, organized by vertical.
+Repository for E-Cell domain induction work, organized by vertical and task.
 
 ## Structure
 
 ```
 E-Cell/
-├── Tech/                # Web Development - Task 1 landing page
-└── AI and Automation/   # Machine Learning & automation induction
+├── Tech/
+│   ├── Task-1/          # GNN Logistics landing page (React + Tailwind)
+│   └── Task-2/          # E-Cell commerce app (Next.js)
+└── AI and Automation/
+    ├── Task-1/          # 10-K SEC filing risk classification
+    └── Task-2/          # Enterprise RAG knowledge retrieval
 ```
 
 ## Tech
@@ -16,13 +20,21 @@ E-Cell/
 
 **Live demo:** https://client-sigma-virid.vercel.app
 
-See [Tech/README.md](Tech/README.md) for setup, deployment, and deliverables.
+See [Tech/Task-1/README.md](Tech/Task-1/README.md) for setup, deployment, and deliverables.
+
+**Task 2:** E-Cell commerce application.
+
+See [Tech/Task-2/ecell-commerce/README.md](Tech/Task-2/ecell-commerce/README.md) for setup and run instructions.
 
 ## AI and Automation
 
-10-K SEC filing risk classification pipeline with FastAPI inference API.
+**Task 1:** 10-K SEC filing risk classification pipeline with FastAPI inference API.
 
-See [AI and Automation/README.md](AI%20and%20Automation/README.md) for setup and run instructions.
+See [AI and Automation/Task-1/README.md](AI%20and%20Automation/Task-1/README.md) for setup and run instructions.
+
+**Task 2:** Enterprise knowledge management and semantic retrieval (RAG) system with Ollama.
+
+See [AI and Automation/Task-2/README.md](AI%20and%20Automation/Task-2/README.md) for setup and run instructions.
 
 ## GitHub
 

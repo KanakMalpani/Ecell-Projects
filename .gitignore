@@ -10,15 +10,15 @@ __pycache__/
 venv/
 .ipynb_checkpoints/
 
-# AI and Automation generated artifacts
-AI and Automation/data/*.csv
-AI and Automation/models/*.joblib
-AI and Automation/reports/*.png
-AI and Automation/reports/*.csv
-AI and Automation/reports/*.json
-AI and Automation/catboost_info/
-AI and Automation/LOCAL_DEMO_GUIDE.md
-AI and Automation/video/
+# AI and Automation Task-1 generated artifacts
+AI and Automation/Task-1/data/*.csv
+AI and Automation/Task-1/models/*.joblib
+AI and Automation/Task-1/reports/*.png
+AI and Automation/Task-1/reports/*.csv
+AI and Automation/Task-1/reports/*.json
+AI and Automation/Task-1/catboost_info/
+AI and Automation/Task-1/LOCAL_DEMO_GUIDE.md
+AI and Automation/Task-1/video/
 
 # OS
 .DS_Store

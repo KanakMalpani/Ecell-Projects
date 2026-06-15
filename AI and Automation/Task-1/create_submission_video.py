@@ -298,7 +298,8 @@ def render_slide(slide: dict, report: dict) -> Path:
         _draw_code_block(ax, slide["code"])
 
     output = SLIDES_DIR / f"{slide['id']}.png"
-    fig.savefig(output, facecolor=BG, bbox_inches="tight", pad_inches=0)
+    # Fixed canvas size (no tight crop) so ffmpeg gets even 1920x1080 frames.
+    fig.savefig(output, facecolor=BG, dpi=100)
     plt.close(fig)
     return output
 
@@ -324,6 +325,14 @@ def build_video(slide_specs: list[dict]) -> Path:
         fps=24,
         codec="libx264",
         audio_codec="aac",
+        ffmpeg_params=[
+            "-pix_fmt",
+            "yuv420p",
+            "-profile:v",
+            "main",
+            "-movflags",
+            "+faststart",
+        ],
         logger=None,
     )
     for clip in clips:
