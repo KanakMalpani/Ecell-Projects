@@ -1,3 +1,9 @@
+/**
+ * Admin banners page — manage homepage promotional banners.
+ *
+ * Create, toggle active/inactive, and delete banner images.
+ * Active banners with valid date ranges appear on the store home page.
+ */
 "use client";
 
 import { useEffect, useState } from "react";

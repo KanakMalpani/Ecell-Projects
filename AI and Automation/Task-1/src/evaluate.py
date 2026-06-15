@@ -1,4 +1,14 @@
-"""Stage 4: evaluate models and produce comparison reports."""
+"""
+Stage 4: evaluate models and produce comparison reports.
+
+Splits data 80/20, trains all three models on the training portion,
+tests each on the held-out 20%, then:
+
+  - Computes accuracy, precision, recall, F1 for each model
+  - Draws confusion matrix PNG images
+  - Saves evaluation_report.json and metrics_comparison.csv
+  - Picks the best model (highest macro F1) and saves it as best_model.joblib
+"""
 
 from __future__ import annotations
 
@@ -27,12 +37,20 @@ logger = setup_logging(__name__)
 
 
 def split_data(features: spmatrix, labels: list[str], test_size: float = 0.2):
+    """
+    Split features and labels into train (80%) and test (20%) sets.
+
+    stratify=labels keeps the same low/medium/high ratio in both sets.
+    This prevents a situation where, say, all "high" filings end up
+    only in the training set and the model never gets tested on them.
+    """
     indices = np.arange(features.shape[0])
     split_kwargs = {
         "test_size": test_size,
         "random_state": RANDOM_STATE,
     }
     class_counts = pd.Series(labels).value_counts()
+    # Only stratify if every class has at least 2 samples (sklearn requirement)
     if class_counts.min() >= 2:
         split_kwargs["stratify"] = labels
 
@@ -45,6 +63,12 @@ def split_data(features: spmatrix, labels: list[str], test_size: float = 0.2):
 
 
 def _predict_proba(model: TrainedModel, features: spmatrix) -> np.ndarray:
+    """
+    Get class probabilities for each sample.
+
+    Returns an array of shape (n_samples, 3) where each row sums to 1.0.
+    Example row: [0.05, 0.90, 0.05] → model is 90% confident it's "medium".
+    """
     estimator = model.estimator
     if model.name in {"adaboost", "catboost"}:
         matrix = features.toarray()
@@ -54,6 +78,7 @@ def _predict_proba(model: TrainedModel, features: spmatrix) -> np.ndarray:
     if hasattr(estimator, "predict_proba"):
         return estimator.predict_proba(matrix)
 
+    # Fallback for models without predict_proba: one-hot encode hard predictions
     preds = np.ravel(estimator.predict(matrix))
     classes = sorted(model.label_encoder, key=model.label_encoder.get)
     proba = np.zeros((len(preds), len(classes)))
@@ -63,6 +88,7 @@ def _predict_proba(model: TrainedModel, features: spmatrix) -> np.ndarray:
 
 
 def _predict_labels(model: TrainedModel, features: spmatrix, int_to_label: dict[int, str]) -> list[str]:
+    """Convert numeric predictions back to "low" / "medium" / "high" strings."""
     estimator = model.estimator
     matrix = features.toarray() if model.name in {"adaboost", "catboost"} else features
     preds = np.ravel(estimator.predict(matrix))
@@ -75,9 +101,18 @@ def evaluate_model(
     y_true: list[str],
     int_to_label: dict[int, str],
 ) -> dict:
+    """
+    Compute all evaluation metrics for one model on the test set.
+
+    Metrics explained:
+      accuracy  — % of predictions that are correct overall
+      precision — when model says "high", how often is it actually high?
+      recall    — of all actual "high" cases, how many did the model catch?
+      F1        — harmonic mean of precision and recall (balanced score)
+    """
     y_pred = _predict_labels(model, features, int_to_label)
     proba = _predict_proba(model, features)
-    confidences = proba.max(axis=1)
+    confidences = proba.max(axis=1)  # highest probability per sample
 
     metrics = {
         "accuracy": float(accuracy_score(y_true, y_pred)),
@@ -97,6 +132,12 @@ def plot_confusion_matrix(
     title: str,
     output_path: Path,
 ) -> None:
+    """
+    Draw and save a confusion matrix heatmap.
+
+    Rows = actual class, Columns = predicted class.
+    Diagonal cells = correct predictions. Off-diagonal = mistakes.
+    """
     fig, ax = plt.subplots(figsize=(5, 4))
     im = ax.imshow(matrix, cmap="Blues")
     ax.set_xticks(range(len(labels)), labels)
@@ -118,6 +159,20 @@ def run_evaluation(
     features: spmatrix,
     labels: list[str],
 ) -> tuple[dict, str, dict[int, str]]:
+    """
+    Full evaluation pipeline — called by run_pipeline.py.
+
+    1. Split data 80/20
+    2. Train all 3 models on training set
+    3. Evaluate each on test set
+    4. Save reports and confusion matrix images
+    5. Pick best model by macro F1 and save as best_model.joblib
+
+    Returns:
+        report       — full evaluation dict (saved to evaluation_report.json)
+        best_model   — name of winning model, e.g. "xgboost"
+        int_to_label — integer → string label map
+    """
     x_train, x_test, y_train, y_test = split_data(features, labels)
     trained, int_to_label = train_models(x_train, y_train)
 
@@ -135,6 +190,7 @@ def run_evaluation(
             output_path=REPORTS_DIR / f"{name}_confusion_matrix.png",
         )
 
+    # Winner = highest macro F1 (balances performance across all 3 classes)
     best_model = max(comparison, key=lambda key: comparison[key]["f1_macro"])
     logger.info("Best model by macro F1: %s", best_model)
 
@@ -155,6 +211,7 @@ def run_evaluation(
     }
     save_json(REPORTS_DIR / "evaluation_report.json", report)
 
+    # Save a tidy CSV table for quick comparison in Excel / reports
     metrics_table = pd.DataFrame(
         [
             {
@@ -169,6 +226,7 @@ def run_evaluation(
     )
     metrics_table.to_csv(REPORTS_DIR / "metrics_comparison.csv", index=False)
 
+    # Persist the winner for the API to load
     joblib.dump(trained[best_model], MODELS_DIR / "best_model.joblib")
     joblib.dump(int_to_label, MODELS_DIR / "label_map.joblib")
 

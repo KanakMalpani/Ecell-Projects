@@ -1,5 +1,12 @@
 #!/usr/bin/env python
-"""Run Stage 4: pipeline evaluation."""
+"""
+Run Stage 4 only: pipeline evaluation.
+
+Runs eval questions through each pipeline mode, saves metrics to reports/.
+
+Usage: python scripts/run_evaluate.py
+       python scripts/run_evaluate.py --pipelines reranked_local extractive
+"""
 
 import sys
 from pathlib import Path

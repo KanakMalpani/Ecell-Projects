@@ -1,3 +1,10 @@
+/**
+ * ProductCard — reusable card showing a product in grid listings.
+ *
+ * Displays image, category, name, price, stock badges, and an "Add" button
+ * that pushes the item into CartContext. Clicking the image/name navigates
+ * to the product detail page at /shop/[slug].
+ */
 "use client";
 
 import Link from "next/link";
@@ -20,6 +27,7 @@ export default function ProductCard({ product }: { product: Product }) {
           className="object-cover transition duration-500 group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, 25vw"
         />
+        {/* Warn shoppers when stock is running low */}
         {product.stock <= 5 && product.stock > 0 && (
           <span className="absolute left-3 top-3 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-medium text-white">
             Low stock

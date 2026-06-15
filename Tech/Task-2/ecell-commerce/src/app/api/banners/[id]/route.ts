@@ -1,3 +1,9 @@
+/**
+ * Single banner API — update or delete a banner by ID.
+ *
+ * PUT    /api/banners/[id]  — admin only: update banner
+ * DELETE /api/banners/[id]  — admin only: delete banner
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";

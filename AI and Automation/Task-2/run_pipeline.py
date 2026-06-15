@@ -1,5 +1,22 @@
 #!/usr/bin/env python
-"""End-to-end pipeline runner for all five stages."""
+"""
+End-to-end pipeline runner for all five RAG stages.
+
+Task 2 builds a Retrieval-Augmented Generation (RAG) system:
+  ask a question → search company documents → LLM answers from context only.
+
+Stages:
+  1. Ingest   — read PDFs/txt, split into chunks          (src/ingest.py)
+  2. Embed    — turn chunks into vectors, store in ChromaDB (src/embed.py)
+  3. Orchestrate — retrieve + rerank + LLM answer         (src/orchestrate.py)
+  4. Evaluate — benchmark 3 pipeline paths                 (src/evaluate.py)
+  5. Deploy   — FastAPI /query endpoint                    (api/app.py)
+
+Usage:
+    python run_pipeline.py
+    python run_pipeline.py --skip-eval
+    python run_pipeline.py --pipelines local_llm reranked_local extractive
+"""
 
 import argparse
 import json
@@ -33,19 +50,23 @@ def main() -> None:
     raw_dir = resolve_path(config["paths"]["raw_dir"])
     processed_dir = resolve_path(config["paths"]["processed_dir"])
 
+    # Stage 1: read documents from data/raw/, save chunks to data/processed/chunks.json
     logger.info("=== Stage 1: Ingestion & Segmentation ===")
     ingest_corpus(raw_dir, processed_dir)
 
+    # Stage 2: embed chunks and build ChromaDB vector index
     logger.info("=== Stage 2: Embedding & Indexing ===")
     build_index()
 
     if not args.skip_eval:
+        # Stage 4: run eval questions through each pipeline, pick the best
         logger.info("=== Stage 4: Evaluation ===")
         report = run_evaluation(pipelines=args.pipelines)
         recommended = report["recommended_pipeline"]
     else:
         recommended = config["evaluation"]["default_pipeline"]
 
+    # Save which pipeline mode the API should use (e.g. reranked_local)
     logger.info("=== Stage 5: Saving system state ===")
     save_pipeline_state(recommended)  # type: ignore[arg-type]
     state_dir = resolve_path(config["paths"]["state_dir"])

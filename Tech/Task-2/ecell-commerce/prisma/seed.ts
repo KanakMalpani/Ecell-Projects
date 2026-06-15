@@ -1,3 +1,11 @@
+/**
+ * Database seed script — populates dev.db with sample data for development.
+ *
+ * Run with: npx prisma db seed
+ *
+ * Creates: admin + demo users, categories, products, coupons, banners,
+ * addresses, and sample orders. Uses bcrypt to hash passwords.
+ */
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";

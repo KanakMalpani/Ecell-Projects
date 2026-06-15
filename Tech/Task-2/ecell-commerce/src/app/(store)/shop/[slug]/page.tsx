@@ -1,3 +1,9 @@
+/**
+ * Product detail page — single product view at /shop/[slug].
+ *
+ * Fetches product by slug from /api/products/[slug].
+ * Shows image, price, stock, quantity picker, and "Add to Cart" button.
+ */
 "use client";
 
 import { useEffect, useState } from "react";

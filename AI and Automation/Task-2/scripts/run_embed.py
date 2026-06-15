@@ -1,5 +1,13 @@
 #!/usr/bin/env python
-"""Run Stage 2: embedding generation and vector indexing."""
+"""
+Run Stage 2 only: embedding generation and vector indexing.
+
+Reads data/processed/chunks.json, embeds with sentence-transformers,
+stores vectors in ChromaDB at models/vector_store/.
+
+Usage: python scripts/run_embed.py
+       python scripts/run_embed.py --no-reset   # append without wiping index
+"""
 
 import sys
 from pathlib import Path

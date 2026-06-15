@@ -1,16 +1,41 @@
+/**
+ * Contact — inquiry form with client-side validation.
+ *
+ * This is the most logic-heavy component in the project.
+ *
+ * How the form works (NO backend server):
+ *   1. User fills in name, email, phone, service, message
+ *   2. validate() checks all fields on submit
+ *   3. If valid, builds a mailto: link with pre-filled subject + body
+ *   4. Opens the user's default email app via window.location.href
+ *   5. Shows a success message and resets the form
+ *
+ * React state:
+ *   form    — current values of all form fields
+ *   errors  — validation error messages per field
+ *   status  — success message shown after submit
+ *
+ * Honeypot: hidden _honeypot field — bots fill it, humans don't.
+ *           If it has a value, submit is silently ignored.
+ */
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { company } from "../data/site";
 
+// Default empty form state — also used to reset after successful submit
 const initialForm = {
   name: "",
   email: "",
   phone: "",
   service: "Freight Forwarding",
   message: "",
-  _honeypot: "",
+  _honeypot: "",  // spam trap — must stay empty
 };
 
+/**
+ * Validate form fields and return an errors object.
+ * An empty errors object {} means the form is valid.
+ */
 function validate(form) {
   const errors = {};
   if (!form.name.trim()) errors.name = "Name is required.";
@@ -31,21 +56,25 @@ export default function Contact() {
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("");
 
+  /** Update a single field value as the user types */
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
-    setErrors((current) => ({ ...current, [name]: "" }));
+    setErrors((current) => ({ ...current, [name]: "" }));  // clear error on edit
   }
 
+  /** Validate and open the email app with a pre-filled message */
   function handleSubmit(event) {
     event.preventDefault();
 
+    // Silently reject if a bot filled the honeypot field
     if (form._honeypot) return;
 
     const nextErrors = validate(form);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (Object.keys(nextErrors).length > 0) return;  // stop if validation failed
 
+    // Build mailto: URL — opens the user's default email client
     const subject = encodeURIComponent(`GNN Logistics Inquiry - ${form.service}`);
     const body = encodeURIComponent(
       [
@@ -60,12 +89,13 @@ export default function Contact() {
 
     window.location.href = `mailto:${company.email}?subject=${subject}&body=${body}`;
     setStatus("Your email app should open with the inquiry ready to send.");
-    setForm(initialForm);
+    setForm(initialForm);  // reset form after submit
   }
 
   return (
     <section id="contact" className="bg-gnn-slate py-16 md:py-20">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 md:grid-cols-2 md:px-6">
+        {/* Left: contact info text */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -83,6 +113,7 @@ export default function Contact() {
           </div>
         </motion.div>
 
+        {/* Right: the inquiry form */}
         <motion.form
           onSubmit={handleSubmit}
           initial={{ opacity: 0, y: 16 }}
@@ -91,6 +122,7 @@ export default function Contact() {
           className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg"
         >
           <div className="grid gap-4">
+            {/* Honeypot — hidden from real users, catches spam bots */}
             <input
               type="text"
               name="_honeypot"
@@ -101,6 +133,8 @@ export default function Contact() {
               aria-hidden="true"
               className="hidden"
             />
+
+            {/* Full Name — required */}
             <label className="text-sm font-semibold">
               Full Name
               <input
@@ -112,6 +146,7 @@ export default function Contact() {
               {errors.name && <span className="mt-1 block text-xs text-gnn-red">{errors.name}</span>}
             </label>
 
+            {/* Email — required, must be valid format */}
             <label className="text-sm font-semibold">
               Email
               <input
@@ -124,6 +159,7 @@ export default function Contact() {
               {errors.email && <span className="mt-1 block text-xs text-gnn-red">{errors.email}</span>}
             </label>
 
+            {/* Phone — optional */}
             <label className="text-sm font-semibold">
               Phone (optional)
               <input
@@ -135,6 +171,7 @@ export default function Contact() {
               {errors.phone && <span className="mt-1 block text-xs text-gnn-red">{errors.phone}</span>}
             </label>
 
+            {/* Service dropdown */}
             <label className="text-sm font-semibold">
               Service
               <select
@@ -150,6 +187,7 @@ export default function Contact() {
               </select>
             </label>
 
+            {/* Message — required */}
             <label className="text-sm font-semibold">
               Message
               <textarea
@@ -171,6 +209,7 @@ export default function Contact() {
               Send Inquiry
             </button>
 
+            {/* Success message shown after form submits */}
             {status && (
               <p className="rounded-xl bg-gnn-slate px-3 py-2 text-sm font-semibold text-gnn-navy">
                 {status}

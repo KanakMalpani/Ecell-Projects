@@ -1,3 +1,8 @@
+/**
+ * Shared utility functions used across the e-commerce app.
+ */
+
+/** Format a number as Indian Rupees, e.g. 1500 → "₹1,500" */
 export function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -6,6 +11,7 @@ export function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+/** Convert text to URL-friendly slug, e.g. "Blue T-Shirt" → "blue-t-shirt" */
 export function slugify(text: string) {
   return text
     .toLowerCase()
@@ -13,12 +19,17 @@ export function slugify(text: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+/** Generate a unique order number like "EC-LK3F9A-X7B2" */
 export function generateOrderNumber() {
   const ts = Date.now().toString(36).toUpperCase();
   const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `EC-${ts}-${rand}`;
 }
 
+/**
+ * Check if a promotional banner should be shown right now.
+ * Considers: active flag, startDate, and endDate.
+ */
 export function isBannerActive(banner: {
   active: boolean;
   startDate: Date | null;

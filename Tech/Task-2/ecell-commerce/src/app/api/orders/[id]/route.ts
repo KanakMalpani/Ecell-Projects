@@ -1,3 +1,9 @@
+/**
+ * Single order API — view or update one order.
+ *
+ * GET   /api/orders/[id]  — order detail (owner or admin only)
+ * PATCH /api/orders/[id]  — admin only: update status/paymentStatus
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, requireAdmin } from "@/lib/auth";

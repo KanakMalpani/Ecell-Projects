@@ -1,3 +1,15 @@
+/**
+ * Central content file for the GNN Logistics landing page.
+ *
+ * Keeping all text/data here means:
+ *   - Components stay focused on layout and behaviour
+ *   - A content editor only needs to edit THIS file
+ *   - No hard-coded strings scattered across 7 component files
+ *
+ * Imported by: Navbar, Hero, About, Services, Testimonials, Contact, Footer
+ */
+
+// Company identity and contact details
 export const company = {
   name: "GNN Logistics Inc.",
   tagline: "Moving business forward with precision and care.",
@@ -8,11 +20,12 @@ export const company = {
   address: "Warehouse District, Trichy - 620015, Tamil Nadu, India",
 };
 
+// Four services shown in the Services section grid
 export const services = [
   {
     title: "Freight Forwarding",
     description: "Road, rail, and multimodal freight planning with live shipment visibility.",
-    icon: "truck",
+    icon: "truck",       // mapped to emoji in Services.jsx
   },
   {
     title: "Warehousing",
@@ -31,6 +44,7 @@ export const services = [
   },
 ];
 
+// Three client testimonials shown in the Testimonials section
 export const testimonials = [
   {
     quote:
@@ -52,12 +66,14 @@ export const testimonials = [
   },
 ];
 
+// Social media links in the Footer
 export const socialLinks = [
   { label: "LinkedIn", href: "https://linkedin.com" },
   { label: "Instagram", href: "https://instagram.com" },
   { label: "X", href: "https://x.com" },
 ];
 
+// Navigation menu items — hrefs match section id attributes for smooth scrolling
 export const navLinks = [
   { label: "Home", href: "#home" },
   { label: "About", href: "#about" },

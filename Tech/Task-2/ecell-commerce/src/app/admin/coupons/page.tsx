@@ -1,3 +1,9 @@
+/**
+ * Admin coupons page — create and manage discount codes.
+ *
+ * Lists existing coupons and a form to add new ones (percentage or fixed discount).
+ * POSTs to /api/coupons; codes are validated at checkout via /api/coupons/validate.
+ */
 "use client";
 
 import { useEffect, useState } from "react";

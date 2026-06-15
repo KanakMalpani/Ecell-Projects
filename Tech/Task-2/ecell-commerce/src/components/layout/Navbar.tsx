@@ -1,3 +1,12 @@
+/**
+ * Navbar — sticky top navigation for the storefront.
+ *
+ * Shows store links (Home, Shop, Orders), cart badge with item count,
+ * login/logout, and an Admin link for users with role === "ADMIN".
+ *
+ * On mobile, a hamburger menu toggles a dropdown (useState + md:hidden).
+ * usePathname() highlights the active link and hides store nav on /admin routes.
+ */
 "use client";
 
 import Link from "next/link";
@@ -15,6 +24,7 @@ export default function Navbar() {
 
   const isAdmin = pathname.startsWith("/admin");
 
+  // Main storefront navigation links
   const links = [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
@@ -33,6 +43,7 @@ export default function Navbar() {
           </span>
         </Link>
 
+        {/* Desktop nav links — hidden on small screens */}
         <div className="hidden items-center gap-8 md:flex">
           {!isAdmin &&
             links.map((link) => (
@@ -101,6 +112,7 @@ export default function Navbar() {
         </div>
       </nav>
 
+      {/* Mobile dropdown menu — shown when hamburger is tapped */}
       {mobileOpen && (
         <div className="border-t border-zinc-100 bg-white px-4 py-4 md:hidden">
           {!isAdmin &&

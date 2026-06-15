@@ -1,3 +1,9 @@
+/**
+ * Admin dashboard — overview stats for store managers.
+ *
+ * Fetches /api/analytics and displays revenue, order count, user count,
+ * top-selling products, and low-stock alerts in stat cards and tables.
+ */
 "use client";
 
 import { useEffect, useState } from "react";

@@ -1,3 +1,9 @@
+/**
+ * Banners API — promotional banner images for the homepage.
+ *
+ * GET  /api/banners       — active banners for store (or all if ?all=true, admin)
+ * POST /api/banners       — admin only: create banner
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";

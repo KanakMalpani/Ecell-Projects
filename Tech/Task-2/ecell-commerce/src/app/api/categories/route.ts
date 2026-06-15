@@ -1,3 +1,9 @@
+/**
+ * Categories API — list and create product categories.
+ *
+ * GET  /api/categories  — public list with product counts
+ * POST /api/categories  — admin only: create category
+ */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";

@@ -1,12 +1,21 @@
+/**
+ * Global styles and brand colour palette.
+ *
+ * Tailwind CSS v4 is imported here. Custom brand colours are defined
+ * in the @theme block and used throughout components as:
+ *   bg-gnn-navy, text-gnn-red, text-gnn-gold, bg-gnn-slate, etc.
+ */
 @import "tailwindcss";
 
+/* Brand colour tokens — change these to retheme the whole site */
 @theme {
-  --color-gnn-navy: #0b1f3a;
-  --color-gnn-red: #c62828;
-  --color-gnn-gold: #ffb800;
-  --color-gnn-slate: #f4f7fb;
+  --color-gnn-navy: #0b1f3a;   /* dark blue — navbar, hero, footer backgrounds */
+  --color-gnn-red: #c62828;    /* red — primary CTA buttons */
+  --color-gnn-gold: #ffb800;   /* gold — accents, stats, highlights */
+  --color-gnn-slate: #f4f7fb;  /* light grey — alternating section backgrounds */
 }
 
+/* Smooth scroll when clicking navbar anchor links (#about, #services, etc.) */
 html {
   scroll-behavior: smooth;
 }

@@ -1,4 +1,17 @@
-"""FastAPI deployment - Stage 5."""
+"""
+FastAPI deployment — Stage 5.
+
+Serves the RAG pipeline as a REST API for live Q&A over company documents.
+
+Start (after running run_pipeline.py):
+    uvicorn api.app:app --host 127.0.0.1 --port 8001 --reload
+
+Endpoints:
+    GET  /health  → server status + active pipeline name
+    POST /query   → ask a question, get answer + sources + confidence
+
+Swagger UI: http://127.0.0.1:8001/docs
+"""
 
 from __future__ import annotations
 
@@ -16,6 +29,7 @@ logger = logging.getLogger("api")
 config = load_config()
 state_path = resolve_path(config["paths"]["state_dir"]) / "pipeline_state.json"
 
+# Load the best pipeline mode saved by run_pipeline.py (e.g. "reranked_local")
 if state_path.exists():
     with state_path.open(encoding="utf-8") as handle:
         saved_state = json.load(handle)
@@ -23,6 +37,7 @@ if state_path.exists():
 else:
     ACTIVE_MODE = config["evaluation"]["default_pipeline"]
 
+# Create the RAG pipeline once at import time — reused for every request
 pipeline = RAGPipeline(mode=ACTIVE_MODE)  # type: ignore[arg-type]
 
 app = FastAPI(
@@ -36,6 +51,7 @@ app = FastAPI(
 
 
 class QueryRequest(BaseModel):
+    """What the client sends to POST /query."""
     query: str = Field(
         ...,
         min_length=3,
@@ -45,6 +61,7 @@ class QueryRequest(BaseModel):
 
 
 class SourceItem(BaseModel):
+    """One source citation in the response."""
     source_file: str
     doc_type: str
     section_hint: str
@@ -54,6 +71,7 @@ class SourceItem(BaseModel):
 
 
 class QueryResponse(BaseModel):
+    """What the API returns after processing a question."""
     answer: str
     confidence: float = Field(..., ge=0.0, le=1.0)
     sources: list[SourceItem]
@@ -63,6 +81,7 @@ class QueryResponse(BaseModel):
 
 @app.get("/health")
 def health() -> dict[str, Any]:
+    """Liveness check — confirms server is running and which pipeline is active."""
     return {
         "status": "ok",
         "active_pipeline": ACTIVE_MODE,
@@ -71,6 +90,21 @@ def health() -> dict[str, Any]:
 
 @app.post("/query", response_model=QueryResponse)
 def query_endpoint(request: QueryRequest) -> QueryResponse:
+    """
+    Ask a natural language question about the enterprise document corpus.
+
+    Example request:
+        {"query": "What is the minimum password length?"}
+
+    Example response:
+        {
+          "answer": "The minimum password length is 14 characters.",
+          "confidence": 0.87,
+          "sources": [{"source_file": "corporate_security_policy.txt", ...}],
+          "pipeline": "reranked_local",
+          "latency_ms": 4200.0
+        }
+    """
     try:
         result = pipeline.query(request.query.strip())
     except Exception as exc:
@@ -92,4 +126,5 @@ def query_endpoint(request: QueryRequest) -> QueryResponse:
 
 @app.on_event("startup")
 def on_startup() -> None:
+    """Refresh pipeline_state.json on server start."""
     save_pipeline_state(ACTIVE_MODE)  # type: ignore[arg-type]

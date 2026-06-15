@@ -1,12 +1,22 @@
-"""Stage 1: load 10-K filings, clean text, extract sections, derive risk labels."""
+"""
+Stage 1: load 10-K filings, clean text, extract sections, derive risk labels.
+
+The raw Hugging Face dataset has NO risk labels, so this module:
+  1. Downloads filing text from Hugging Face
+  2. Cleans messy HTML / boilerplate
+  3. Extracts four key sections (Risk Factors, Business, MD&A, Financials)
+  4. Scores each filing's Risk Factors section with keyword matching
+  5. Splits filings into low / medium / high risk groups
+
+Output: a pandas DataFrame ready for feature engineering in features.py.
+"""
 
 from __future__ import annotations
-
-import re
 
 import pandas as pd
 from huggingface_hub import hf_hub_download
 
+from .text_preprocessor import get_preprocessor
 from .utils import (
     DATASET_NAME,
     DATASET_SPLIT,
@@ -18,6 +28,10 @@ from .utils import (
 
 logger = setup_logging(__name__)
 
+# ---------------------------------------------------------------------------
+# Keyword lists used to score how risky a filing's Risk Factors section is.
+# High-risk words are weighted 3× because they signal serious danger.
+# ---------------------------------------------------------------------------
 HIGH_RISK_TERMS = (
     "bankruptcy",
     "litigation",
@@ -48,36 +62,31 @@ MEDIUM_RISK_TERMS = (
     "supply chain",
 )
 
-BOILERPLATE_PATTERNS = (
-    r"table of contents",
-    r"forward[- ]looking statements",
-    r"item\s+\d+[a-z]?\.?",
-    r"page\s+\d+\s+of\s+\d+",
-    r"sec\.gov",
-    r"united states securities and exchange commission",
-)
-
-NOISE_PATTERN = re.compile(r"[^a-z0-9\s\.\,\;\:\-\%\$\(\)]+", re.IGNORECASE)
-WHITESPACE_PATTERN = re.compile(r"\s+")
+# NLTK preprocessor — tokenization, stop-word removal, lemmatization
+_preprocessor = get_preprocessor()
 
 
 def clean_text(text: str) -> str:
-    if not text or not isinstance(text, str):
-        return ""
+    """
+    Normalise raw filing text so the model sees clean, consistent input.
 
-    cleaned = text.lower()
-    cleaned = re.sub(r"<[^>]+>", " ", cleaned)
-    cleaned = re.sub(r"&#\d+;", " ", cleaned)
-    cleaned = NOISE_PATTERN.sub(" ", cleaned)
-
-    for pattern in BOILERPLATE_PATTERNS:
-        cleaned = re.sub(pattern, " ", cleaned, flags=re.IGNORECASE)
-
-    cleaned = WHITESPACE_PATTERN.sub(" ", cleaned).strip()
-    return cleaned
+    Uses the NLTK TextPreprocessor instead of hardcoded word filters:
+      1. Strip HTML tags, entities, and SEC boilerplate (regex)
+      2. Tokenize with NLTK word_tokenize
+      3. Remove English stop words from NLTK corpus
+      4. Lemmatize tokens with WordNet
+      5. Rejoin into a single cleaned string
+    """
+    return _preprocessor.preprocess(text)
 
 
 def extract_sections(row: dict) -> dict[str, str]:
+    """
+    Pull the four 10-K sections from one raw dataset record.
+
+    Each section is cleaned independently so we can use them separately
+    later (e.g. for custom word-count features).
+    """
     sections: dict[str, str] = {}
     for key, column in SECTION_COLUMNS.items():
         raw = row.get(column) or ""
@@ -86,17 +95,32 @@ def extract_sections(row: dict) -> dict[str, str]:
 
 
 def build_document_text(sections: dict[str, str]) -> str:
+    """
+    Join all four sections into one long string — the model reads this.
+
+    Risk Factors comes first because it carries the strongest risk signal.
+    """
     ordered = ("risk_factors", "business", "mda", "financial_statements")
     parts = [sections[name] for name in ordered if sections.get(name)]
     return " ".join(parts).strip()
 
 
 def compute_risk_score(risk_text: str) -> float:
+    """
+    Score how risky a filing's Risk Factors section sounds.
+
+    Formula:
+      score = (high_hits × 3 + medium_hits × 1) / word_count × 1000
+
+    Multiplying by 1000 just makes the numbers easier to work with.
+    A filing mentioning "bankruptcy" and "litigation" scores much higher
+    than one that only says "competition" and "uncertain".
+    """
     if not risk_text:
         return 0.0
 
     text = risk_text.lower()
-    words = max(len(text.split()), 1)
+    words = max(len(text.split()), 1)  # avoid division by zero
     high_hits = sum(3.0 for term in HIGH_RISK_TERMS if term in text)
     medium_hits = sum(1.0 for term in MEDIUM_RISK_TERMS if term in text)
     density = (high_hits + medium_hits) / words
@@ -104,6 +128,17 @@ def compute_risk_score(risk_text: str) -> float:
 
 
 def assign_risk_labels(scores: list[float]) -> list[str]:
+    """
+    Convert numeric risk scores into low / medium / high labels.
+
+    Uses pd.qcut to split filings into three EQUAL-SIZED groups by rank:
+      - bottom third  → "low"
+      - middle third  → "medium"
+      - top third     → "high"
+
+    If qcut fails (e.g. too few unique scores), falls back to a simple
+    median split: above median = high, below = low.
+    """
     if not scores:
         return []
 
@@ -118,6 +153,11 @@ def assign_risk_labels(scores: list[float]) -> list[str]:
 
 
 def load_raw_records(max_samples: int = DEFAULT_MAX_SAMPLES) -> list[dict]:
+    """
+    Download the SEC filings parquet file from Hugging Face and load it.
+
+    Returns a list of dicts — one dict per company filing.
+    """
     logger.info(
         "Loading dataset %s split=%s (max_samples=%s)",
         DATASET_NAME,
@@ -136,16 +176,30 @@ def load_raw_records(max_samples: int = DEFAULT_MAX_SAMPLES) -> list[dict]:
 
 
 def preprocess_records(max_samples: int = DEFAULT_MAX_SAMPLES) -> pd.DataFrame:
+    """
+    Full preprocessing pipeline: load → clean → score → label.
+
+    Returns a DataFrame with one row per usable filing, including:
+      - company_name, filing_date
+      - text (combined sections)
+      - risk_score (numeric)
+      - risk_label (low / medium / high)
+      - individual section texts (for custom features later)
+    """
     rows: list[dict] = []
     risk_scores: list[float] = []
 
     for record in load_raw_records(max_samples=max_samples):
         sections = extract_sections(record)
         document_text = build_document_text(sections)
+
+        # Skip filings that are too short to be useful after cleaning
         if len(document_text.split()) < 30:
             continue
 
-        risk_score = compute_risk_score(sections.get("risk_factors", ""))
+        # Risk keyword scoring uses markup-stripped text (keeps phrases like "going concern")
+        raw_risk = str(record.get("Risk Factors") or "")
+        risk_score = compute_risk_score(_preprocessor.strip_markup(raw_risk))
         risk_scores.append(risk_score)
         rows.append(
             {
@@ -163,6 +217,7 @@ def preprocess_records(max_samples: int = DEFAULT_MAX_SAMPLES) -> pd.DataFrame:
     if not rows:
         raise ValueError("No usable records after preprocessing.")
 
+    # Assign labels AFTER collecting all scores so qcut can rank them fairly
     labels = assign_risk_labels(risk_scores)
     frame = pd.DataFrame(rows)
     frame["risk_label"] = labels
@@ -171,6 +226,7 @@ def preprocess_records(max_samples: int = DEFAULT_MAX_SAMPLES) -> pd.DataFrame:
 
 
 def save_processed(frame: pd.DataFrame, path) -> None:
+    """Save the processed DataFrame to a CSV file for inspection / reuse."""
     path.parent.mkdir(parents=True, exist_ok=True)
     frame.to_csv(path, index=False)
     logger.info("Saved processed data to %s", path)

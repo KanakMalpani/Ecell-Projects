@@ -1,16 +1,20 @@
-fastapi>=0.115.0
-uvicorn>=0.30.0
-pydantic>=2.0.0
-pydantic-settings>=2.0.0
-pypdf>=4.0.0
-pdfplumber>=0.11.0
-chromadb>=0.5.0
-sentence-transformers>=3.0.0
-httpx>=0.27.0
-python-dotenv>=1.0.0
-tiktoken>=0.7.0
-matplotlib>=3.8.0
-pandas>=2.1.0
-numpy>=1.26.0
-scikit-learn>=1.4.0
-reportlab>=4.0.0
+# Python dependencies for the Enterprise RAG pipeline (Task 2).
+# Install with: pip install -r requirements.txt
+
+fastapi>=0.115.0           # Web framework for /query API
+uvicorn>=0.30.0            # ASGI server to run FastAPI
+pydantic>=2.0.0            # Request/response JSON validation
+pydantic-settings>=2.0.0   # Settings management
+pypdf>=4.0.0               # PDF reading (fallback)
+pdfplumber>=0.11.0         # PDF text extraction (primary)
+chromadb>=0.5.0            # Local vector database for semantic search
+sentence-transformers>=3.0.0  # Embedding model + cross-encoder reranker
+httpx>=0.27.0              # HTTP client for Ollama API calls
+python-dotenv>=1.0.0       # Load .env for optional GEMINI_API_KEY
+tiktoken>=0.7.0            # Accurate token counting for chunking
+matplotlib>=3.8.0          # Evaluation metric charts
+pandas>=2.1.0              # Metrics tables and aggregation
+numpy>=1.26.0              # Numerical operations
+scikit-learn>=1.4.0        # Cosine similarity for evaluation metrics
+nltk>=3.8.0                # Tokenization, stop words, lemmatization
+reportlab>=4.0.0           # Generate submission PDFs

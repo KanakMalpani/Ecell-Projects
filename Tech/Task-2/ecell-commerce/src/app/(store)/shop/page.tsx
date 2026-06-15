@@ -1,3 +1,10 @@
+/**
+ * Shop page — browse and filter all products (Client Component).
+ *
+ * Reads URL search params (?search=, ?category=) and fetches from /api/products.
+ * Sidebar filters by category; search box filters by product name.
+ * Wrapped in Suspense because useSearchParams() requires it in Next.js App Router.
+ */
 "use client";
 
 import { useEffect, useState, Suspense } from "react";

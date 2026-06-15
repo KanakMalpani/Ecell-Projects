@@ -1,3 +1,7 @@
+// Prisma schema — defines all database tables, fields, and relationships.
+// SQLite database file: dev.db (path set in .env as DATABASE_URL).
+// Generated client output: src/generated/prisma (imported as @/generated/prisma).
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"

@@ -1,3 +1,12 @@
+/**
+ * Testimonials — three client review cards on a dark navy background.
+ *
+ * Data comes from testimonials[] in data/site.js.
+ * Each card shows a quote, customer name (gold), and job title.
+ *
+ * Layout: 1 column on mobile, 3 columns on desktop (md:grid-cols-3).
+ * Staggered fade-in animation as you scroll down the page.
+ */
 import { motion } from "framer-motion";
 import { testimonials } from "../data/site";
 

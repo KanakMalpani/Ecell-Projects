@@ -1,3 +1,8 @@
+/**
+ * Analytics API — admin dashboard statistics.
+ *
+ * GET /api/analytics  — admin only: revenue, orders, top products, low stock
+ */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";

@@ -1,3 +1,9 @@
+/**
+ * Orders page — list of the logged-in user's past orders.
+ *
+ * Fetches from /api/orders (returns only the current user's orders).
+ * Each row links to /orders/[id] for full order detail and tracking.
+ */
 "use client";
 
 import { useEffect, useState } from "react";

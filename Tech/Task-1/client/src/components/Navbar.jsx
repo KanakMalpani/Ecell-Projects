@@ -1,13 +1,27 @@
+/**
+ * Navbar — sticky top navigation bar.
+ *
+ * Desktop (md+): logo + horizontal menu links + "Get a Quote" button
+ * Mobile:        hamburger "Menu" button that toggles a dropdown
+ *
+ * React concepts used:
+ *   useState     — tracks whether the mobile menu is open
+ *   AnimatePresence + motion.nav — smooth slide-down animation (Framer Motion)
+ *
+ * Navigation uses anchor links (#home, #about, etc.) for smooth scrolling.
+ */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { company, navLinks } from "../data/site";
 
 export default function Navbar() {
+  // false = menu closed, true = menu open (mobile only)
   const [open, setOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-gnn-navy/95 text-white backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-6">
+        {/* Logo — links back to the top of the page */}
         <a href="#home" className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-full bg-gnn-gold font-bold text-gnn-navy">
             G
@@ -18,6 +32,7 @@ export default function Navbar() {
           </div>
         </a>
 
+        {/* Desktop navigation — hidden on mobile (hidden md:flex) */}
         <nav className="hidden items-center gap-6 md:flex">
           {navLinks.map((link) => (
             <a
@@ -36,6 +51,7 @@ export default function Navbar() {
           </a>
         </nav>
 
+        {/* Mobile hamburger button — only visible on small screens (md:hidden) */}
         <button
           type="button"
           className="rounded-md border border-white/20 px-3 py-2 text-sm font-semibold md:hidden"
@@ -47,6 +63,7 @@ export default function Navbar() {
         </button>
       </div>
 
+      {/* Mobile dropdown menu — animated open/close with Framer Motion */}
       <AnimatePresence>
         {open && (
           <motion.nav
@@ -61,7 +78,7 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   className="font-semibold"
-                  onClick={() => setOpen(false)}
+                  onClick={() => setOpen(false)}  // close menu after clicking a link
                 >
                   {link.label}
                 </a>

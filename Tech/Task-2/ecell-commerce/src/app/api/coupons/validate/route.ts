@@ -1,3 +1,8 @@
+/**
+ * Coupon validation API — check if a code is valid at checkout.
+ *
+ * POST /api/coupons/validate  — { code, subtotal } → discount amount or error
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 

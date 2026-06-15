@@ -1,4 +1,16 @@
-"""Stage 1: Document ingestion and text segmentation."""
+"""
+Stage 1: Document ingestion and text segmentation.
+
+Reads all PDF/txt/md files from data/raw/, then:
+  1. Extracts text (pdfplumber for PDFs, plain read for txt/md)
+  2. Cleans boilerplate headers/footers
+  3. Detects document type (SOP, policy, compliance, etc.)
+  4. Splits text into logical sections (by headings)
+  5. Chunks each section into ~512-token pieces with overlap
+  6. Saves all chunks to data/processed/chunks.json
+
+Each chunk becomes one searchable unit in the vector index (Stage 2).
+"""
 
 from __future__ import annotations
 
@@ -24,16 +36,27 @@ logger = setup_logging("ingest")
 
 @dataclass
 class DocumentChunk:
-    chunk_id: str
-    source_file: str
-    doc_type: str
-    section_hint: str
-    text: str
-    token_count: int
-    chunk_index: int
+    """
+    One searchable piece of a document.
+
+    Stored in chunks.json and later embedded into ChromaDB.
+    """
+    chunk_id: str        # unique ID, e.g. "corporate_security_policy__0003"
+    source_file: str     # original filename
+    doc_type: str        # SOP, policy, compliance, etc.
+    section_hint: str    # heading this chunk came from
+    text: str            # the actual chunk text
+    token_count: int     # how many tokens (for monitoring)
+    chunk_index: int     # position within the source file
 
 
 def extract_text_from_file(path: Path) -> str:
+    """
+    Read raw text from a PDF, .txt, or .md file.
+
+    PDFs: uses pdfplumber to extract text page by page.
+    Text files: read directly as UTF-8.
+    """
     suffix = path.suffix.lower()
     if suffix == ".pdf":
         pages: list[str] = []
@@ -48,7 +71,16 @@ def extract_text_from_file(path: Path) -> str:
 
 
 def split_into_sections(text: str) -> list[tuple[str, str]]:
-    """Split on blank lines / numbered headings to preserve structure."""
+    """
+    Split document text into logical sections based on headings.
+
+    A line is treated as a heading if it is:
+      - ALL CAPS and short (< 80 chars)
+      - Starts with SOP, SYMPTOM, PHASE, CAUSE
+      - A numbered heading like "1. PASSWORD REQUIREMENTS"
+
+    Returns list of (heading, section_text) pairs.
+    """
     blocks = [block.strip() for block in text.split("\n\n") if block.strip()]
     sections: list[tuple[str, str]] = []
     current_heading = "general"
@@ -85,6 +117,16 @@ def chunk_text(
     min_chunk_chars: int,
     encoding_name: str = "cl100k_base",
 ) -> list[str]:
+    """
+    Split a section into overlapping token-sized chunks.
+
+    Uses tiktoken (same tokenizer as GPT models) to count tokens accurately.
+    Overlap ensures sentences at chunk boundaries aren't lost.
+
+    Example with chunk_size=512, overlap=64:
+      Chunk 1: tokens 0–512
+      Chunk 2: tokens 448–960  (64-token overlap with chunk 1)
+    """
     enc = tiktoken.get_encoding(encoding_name)
     tokens = enc.encode(text)
     if not tokens:
@@ -104,6 +146,11 @@ def chunk_text(
 
 
 def ingest_corpus(raw_dir: Path, processed_dir: Path) -> list[DocumentChunk]:
+    """
+    Process every document in raw_dir and return all chunks.
+
+    Saves output to processed_dir/chunks.json.
+    """
     config = load_config()
     chunk_cfg = config["chunking"]
     all_chunks: list[DocumentChunk] = []
@@ -163,6 +210,7 @@ def ingest_corpus(raw_dir: Path, processed_dir: Path) -> list[DocumentChunk]:
 
 
 def main() -> None:
+    """CLI entry point: python scripts/run_ingest.py"""
     parser = argparse.ArgumentParser(description="Stage 1: ingest and chunk documents")
     parser.add_argument("--raw-dir", default=None, help="Override raw document directory")
     args = parser.parse_args()

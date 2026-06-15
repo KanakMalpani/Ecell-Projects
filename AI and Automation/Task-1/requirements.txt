@@ -1,13 +1,17 @@
-catboost>=1.2
-fastapi>=0.115.0
-pyarrow>=14.0.0
-huggingface_hub>=0.26.0
-joblib>=1.4.0
-matplotlib>=3.8.0
-numpy>=1.26.0
-pandas>=2.1.0
-pydantic>=2.0.0
-scikit-learn>=1.4.0
-scipy>=1.11.0
-uvicorn>=0.30.0
-xgboost>=2.0.0
+# Python dependencies for the 10-K risk classification pipeline.
+# Install with: pip install -r requirements.txt
+
+catboost>=1.2          # Gradient boosting classifier (model #3)
+fastapi>=0.115.0       # Web framework for the /predict API
+pyarrow>=14.0.0        # Read parquet files from Hugging Face dataset
+huggingface_hub>=0.26.0  # Download dataset files from Hugging Face Hub
+joblib>=1.4.0          # Save/load trained models as .joblib files
+matplotlib>=3.8.0      # Draw confusion matrix PNG images
+numpy>=1.26.0          # Numerical arrays (used everywhere)
+pandas>=2.1.0          # DataFrames for tabular filing data
+pydantic>=2.0.0        # Validate API request/response JSON schemas
+scikit-learn>=1.4.0    # TF-IDF vectorizer, train/test split, metrics
+scipy>=1.11.0         # Sparse matrix operations (hstack, csr_matrix)
+nltk>=3.8.0           # Tokenization, stop words, lemmatization
+uvicorn>=0.30.0        # ASGI server to run the FastAPI app
+xgboost>=2.0.0         # Gradient boosting classifier (best model)

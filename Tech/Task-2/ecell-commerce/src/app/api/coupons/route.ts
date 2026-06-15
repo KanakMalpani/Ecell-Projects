@@ -1,3 +1,9 @@
+/**
+ * Coupons API — admin management of discount codes.
+ *
+ * GET  /api/coupons  — admin only: list all coupons
+ * POST /api/coupons  — admin only: create coupon
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";

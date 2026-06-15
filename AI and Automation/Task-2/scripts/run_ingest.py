@@ -1,5 +1,12 @@
 #!/usr/bin/env python
-"""Run Stage 1: document ingestion and chunking."""
+"""
+Run Stage 1 only: document ingestion and chunking.
+
+Equivalent to the first step of run_pipeline.py.
+Reads PDFs/txt from data/raw/, saves chunks to data/processed/chunks.json.
+
+Usage: python scripts/run_ingest.py
+"""
 
 import sys
 from pathlib import Path

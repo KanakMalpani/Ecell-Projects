@@ -1,4 +1,21 @@
-"""Generate a short submission demo video explaining the 10-K risk classifier."""
+"""
+Generate a short submission demo video explaining the 10-K risk classifier.
+
+This is a SEPARATE utility script — not part of the core ML pipeline.
+It creates an MP4 demo video for submission / presentation purposes.
+
+How it works:
+  1. Define slide content (titles, bullets, narration text) in SLIDES list
+  2. Render each slide as a 1920×1080 PNG using matplotlib
+  3. Generate AI voiceover for each slide using edge-tts (Microsoft TTS)
+  4. Combine slide images + audio into a video with moviepy
+
+Output: video/submission_demo.mp4
+
+Usage:
+    python create_submission_video.py
+    (requires: edge-tts, matplotlib, moviepy, numpy)
+"""
 
 from __future__ import annotations
 
@@ -13,21 +30,31 @@ import numpy as np
 from matplotlib.patches import FancyBboxPatch
 from moviepy import AudioFileClip, ImageClip, concatenate_videoclips
 
+# ---------------------------------------------------------------------------
+# Paths and visual constants
+# ---------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent
 OUTPUT_DIR = PROJECT_ROOT / "video"
-SLIDES_DIR = OUTPUT_DIR / "slides"
-AUDIO_DIR = OUTPUT_DIR / "audio"
+SLIDES_DIR = OUTPUT_DIR / "slides"   # rendered PNG images
+AUDIO_DIR = OUTPUT_DIR / "audio"     # TTS mp3 files
 REPORT_PATH = PROJECT_ROOT / "reports" / "evaluation_report.json"
 
-WIDTH, HEIGHT = 1920, 1080
-BG = "#0f172a"
-ACCENT = "#38bdf8"
-TEXT = "#f8fafc"
-MUTED = "#94a3b8"
-SUCCESS = "#4ade80"
+WIDTH, HEIGHT = 1920, 1080  # Full HD resolution
 
+# Colour palette for slides (dark theme)
+BG = "#0f172a"       # dark navy background
+ACCENT = "#38bdf8"   # sky blue accents
+TEXT = "#f8fafc"     # near-white text
+MUTED = "#94a3b8"    # grey subtitles
+SUCCESS = "#4ade80"  # green highlights (for best model)
+
+# Microsoft neural TTS voice (free via edge-tts, no API key needed)
 VOICE = "en-US-GuyNeural"
 
+# ---------------------------------------------------------------------------
+# Slide definitions — one dict per slide
+# Each slide can have: bullets, flow, table, confusion, or code
+# ---------------------------------------------------------------------------
 SLIDES = [
     {
         "id": "01_title",
@@ -144,23 +171,30 @@ SLIDES = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Slide rendering helpers (matplotlib drawing functions)
+# ---------------------------------------------------------------------------
+
 def _setup_figure() -> tuple[plt.Figure, plt.Axes]:
+    """Create a blank 1920×1080 figure with dark background."""
     fig, ax = plt.subplots(figsize=(WIDTH / 100, HEIGHT / 100), dpi=100)
     fig.patch.set_facecolor(BG)
     ax.set_facecolor(BG)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
-    ax.axis("off")
+    ax.axis("off")  # hide axis lines — this is a slide, not a chart
     return fig, ax
 
 
 def _draw_header(ax: plt.Axes, title: str, subtitle: str) -> None:
+    """Draw the slide title and subtitle at the top."""
     ax.text(0.06, 0.88, title, fontsize=42, color=TEXT, fontweight="bold", va="top")
     ax.text(0.06, 0.80, subtitle, fontsize=22, color=ACCENT, va="top")
     ax.plot([0.06, 0.94], [0.76, 0.76], color="#334155", linewidth=2)
 
 
 def _draw_bullets(ax: plt.Axes, bullets: list[str], y_start: float = 0.62) -> None:
+    """Draw a list of bullet points as rounded dark boxes."""
     for index, bullet in enumerate(bullets):
         y = y_start - index * 0.1
         ax.add_patch(
@@ -178,6 +212,7 @@ def _draw_bullets(ax: plt.Axes, bullets: list[str], y_start: float = 0.62) -> No
 
 
 def _draw_flow(ax: plt.Axes, steps: list[str]) -> None:
+    """Draw pipeline steps as connected boxes with arrows between them."""
     x_positions = np.linspace(0.12, 0.88, len(steps))
     for index, (step, x) in enumerate(zip(steps, x_positions)):
         ax.add_patch(
@@ -202,11 +237,13 @@ def _draw_flow(ax: plt.Axes, steps: list[str]) -> None:
 
 
 def _load_metrics() -> dict:
+    """Read evaluation results saved by evaluate.py."""
     with REPORT_PATH.open(encoding="utf-8") as handle:
         return json.load(handle)
 
 
 def _draw_model_table(ax: plt.Axes, report: dict) -> None:
+    """Draw a comparison table of the three models' accuracy and F1 scores."""
     rows = [
         ("Model", "Accuracy", "F1 (macro)"),
         ("XGBoost", "74%", "0.71"),
@@ -217,7 +254,7 @@ def _draw_model_table(ax: plt.Axes, report: dict) -> None:
     for row_index, row in enumerate(rows):
         color = ACCENT if row_index == 0 else TEXT
         weight = "bold" if row_index == 0 else "normal"
-        highlight = row_index == 1
+        highlight = row_index == 1  # highlight XGBoost row in green
         if highlight:
             ax.add_patch(
                 FancyBboxPatch(
@@ -240,6 +277,7 @@ def _draw_model_table(ax: plt.Axes, report: dict) -> None:
 
 
 def _draw_confusion_matrix(ax: plt.Axes, matrix: list[list[int]]) -> None:
+    """Draw the XGBoost confusion matrix heatmap on the slide."""
     labels = ["low", "medium", "high"]
     data = np.array(matrix)
     im_ax = ax.inset_axes([0.28, 0.18, 0.44, 0.48])
@@ -257,6 +295,7 @@ def _draw_confusion_matrix(ax: plt.Axes, matrix: list[list[int]]) -> None:
 
 
 def _draw_code_block(ax: plt.Axes, code: str) -> None:
+    """Draw an API example as a monospace code block."""
     wrapped = "\n".join(textwrap.wrap(code, width=52)) if "\n" not in code else code
     ax.add_patch(
         FancyBboxPatch(
@@ -274,6 +313,13 @@ def _draw_code_block(ax: plt.Axes, code: str) -> None:
 
 
 def render_slide(slide: dict, report: dict) -> Path:
+    """
+    Render one slide dict into a PNG image.
+
+    Chooses the right drawing function based on what keys the slide has:
+      bullets → bullet list,  flow → pipeline diagram,
+      table → model comparison,  confusion → heatmap,  code → API example
+    """
     fig, ax = _setup_figure()
     _draw_header(ax, slide["title"], slide["subtitle"])
 
@@ -305,6 +351,7 @@ def render_slide(slide: dict, report: dict) -> Path:
 
 
 async def synthesize_narration(slide: dict) -> Path:
+    """Generate an MP3 voiceover for one slide using Microsoft edge-tts."""
     output = AUDIO_DIR / f"{slide['id']}.mp3"
     communicate = edge_tts.Communicate(slide["narration"], VOICE)
     await communicate.save(str(output))
@@ -312,6 +359,11 @@ async def synthesize_narration(slide: dict) -> Path:
 
 
 def build_video(slide_specs: list[dict]) -> Path:
+    """
+    Stitch all slide images + audio clips into one MP4 video.
+
+    Each slide is shown for exactly as long as its narration audio lasts.
+    """
     clips = []
     for slide in slide_specs:
         audio = AudioFileClip(str(slide["audio"]))
@@ -342,6 +394,7 @@ def build_video(slide_specs: list[dict]) -> Path:
 
 
 async def main() -> None:
+    """Main entry point: render slides → generate audio → build video."""
     OUTPUT_DIR.mkdir(exist_ok=True)
     SLIDES_DIR.mkdir(exist_ok=True)
     AUDIO_DIR.mkdir(exist_ok=True)

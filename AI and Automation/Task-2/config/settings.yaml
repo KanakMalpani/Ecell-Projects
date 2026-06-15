@@ -1,39 +1,46 @@
-# RAG pipeline configuration
+# RAG pipeline configuration — edit this file to tune the system.
+# All paths are relative to the Task-2 project root.
+
 paths:
-  raw_dir: data/raw
-  processed_dir: data/processed
-  vector_store_dir: models/vector_store
-  state_dir: models/state
-  reports_dir: reports
+  raw_dir: data/raw              # drop PDF/txt files here before ingesting
+  processed_dir: data/processed  # chunks.json saved here after Stage 1
+  vector_store_dir: models/vector_store  # ChromaDB index on disk
+  state_dir: models/state        # pipeline_state.json, index_state.json
+  reports_dir: reports           # evaluation metrics and charts
 
 chunking:
-  chunk_size: 512        # tokens (approx via tiktoken cl100k_base)
-  chunk_overlap: 64      # token overlap between consecutive chunks
-  min_chunk_chars: 100
+  chunk_size: 512        # max tokens per chunk (via tiktoken cl100k_base)
+  chunk_overlap: 64      # overlapping tokens between consecutive chunks
+  min_chunk_chars: 100   # discard chunks shorter than this
 
 embedding:
-  model_name: sentence-transformers/all-MiniLM-L6-v2
-  batch_size: 32
+  model_name: sentence-transformers/all-MiniLM-L6-v2  # local embedding model
+  batch_size: 32         # chunks encoded per batch (tune for your RAM)
 
 retrieval:
-  top_k: 8               # initial vector search candidates
-  rerank_top_k: 4        # chunks passed to LLM after reranking
-  similarity_threshold: 0.25
+  top_k: 8               # initial vector search candidates from ChromaDB
+  rerank_top_k: 4        # chunks passed to LLM after cross-encoder reranking
+  similarity_threshold: 0.25  # discard chunks below this cosine similarity
 
 llm:
-  provider: ollama
-  ollama_model: qwen2.5:7b
+  provider: ollama       # "ollama" (local, default) or "gemini" (cloud, needs API key)
+  ollama_model: qwen2.5:7b          # pull with: ollama pull qwen2.5:7b
   ollama_base_url: http://localhost:11434
   ollama_timeout_seconds: 120
-  temperature: 0.1
+  temperature: 0.1       # low = more deterministic, factual answers
   max_output_tokens: 512
 
 evaluation:
   eval_questions_file: data/eval_questions.json
-  default_pipeline: reranked_local
+  default_pipeline: reranked_local  # used if --skip-eval is passed
 
 anti_hallucination:
   require_source_citation: true
   abstain_phrase: "I cannot find sufficient information in the provided documents to answer this question."
   min_context_similarity: 0.30
-  max_context_tokens: 3000
+  max_context_tokens: 3000  # max tokens of retrieved context sent to LLM
+
+preprocessing:
+  remove_stopwords: true   # NLTK English stop-word list (not hardcoded)
+  lemmatize: true          # WordNet lemmatization before query embedding
+  min_token_length: 2      # drop single-char tokens after tokenization

@@ -1,3 +1,10 @@
+/**
+ * Checkout page — place an order with shipping address and coupon.
+ *
+ * Requires login (redirects to /login if not authenticated).
+ * Loads saved addresses, validates coupon codes, and POSTs to /api/orders.
+ * On success: clears cart and shows order confirmation.
+ */
 "use client";
 
 import { useEffect, useState } from "react";

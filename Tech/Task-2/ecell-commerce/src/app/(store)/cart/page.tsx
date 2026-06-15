@@ -1,3 +1,9 @@
+/**
+ * Cart page — review items before checkout.
+ *
+ * Reads cart state from CartContext (stored in localStorage).
+ * Lets users change quantities, remove items, and proceed to /checkout.
+ */
 "use client";
 
 import Image from "next/image";

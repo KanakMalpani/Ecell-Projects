@@ -1,4 +1,18 @@
-"""Stage 2: Embedding generation and vector indexing."""
+"""
+Stage 2: Embedding generation and vector indexing.
+
+Turns text chunks into numerical vectors (embeddings) and stores them
+in a local ChromaDB database for fast similarity search.
+
+Flow:
+  1. Load chunks.json from Stage 1
+  2. Encode each chunk with sentence-transformers (all-MiniLM-L6-v2)
+  3. Store vectors + metadata in ChromaDB (models/vector_store/)
+  4. Save index_state.json with stats
+
+At query time, the user's question is also embedded and ChromaDB
+finds the most similar chunks by cosine distance.
+"""
 
 from __future__ import annotations
 
@@ -17,17 +31,27 @@ logger = setup_logging("embed")
 
 @dataclass
 class RetrievedChunk:
+    """
+    One chunk returned by a vector search, with similarity score.
+
+    Used by orchestrate.py when building LLM context.
+    """
     chunk_id: str
     text: str
     source_file: str
     doc_type: str
     section_hint: str
-    distance: float
-    similarity: float
+    distance: float      # cosine distance (0 = identical, 2 = opposite)
+    similarity: float    # 1 - distance, clamped to 0.0 minimum
 
 
 class VectorIndex:
-    """ChromaDB-backed local vector store with serialization."""
+    """
+    ChromaDB-backed local vector store.
+
+    ChromaDB persists to disk so the index survives server restarts.
+    Uses cosine distance — lower distance = more similar text.
+    """
 
     def __init__(self, persist_dir: str, collection_name: str = "enterprise_docs"):
         self.persist_dir = resolve_path(persist_dir)
@@ -41,6 +65,7 @@ class VectorIndex:
         )
 
     def reset(self) -> None:
+        """Delete and recreate the collection (used when rebuilding the index)."""
         name = self.collection.name
         self.client.delete_collection(name)
         self.collection = self.client.get_or_create_collection(
@@ -53,6 +78,7 @@ class VectorIndex:
         chunks: list[dict[str, Any]],
         embeddings: list[list[float]],
     ) -> None:
+        """Insert chunk texts, embeddings, and metadata into the index."""
         self.collection.add(
             ids=[c["chunk_id"] for c in chunks],
             embeddings=embeddings,
@@ -69,6 +95,11 @@ class VectorIndex:
         )
 
     def query(self, query_embedding: list[float], top_k: int) -> list[RetrievedChunk]:
+        """
+        Find the top_k most similar chunks to a query embedding.
+
+        Returns chunks sorted by similarity (highest first).
+        """
         results = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
@@ -98,6 +129,7 @@ class VectorIndex:
         return retrieved
 
     def count(self) -> int:
+        """Return total number of vectors stored in the index."""
         return self.collection.count()
 
 
@@ -106,6 +138,15 @@ def build_index(
     vector_store_dir: str | None = None,
     reset: bool = True,
 ) -> dict[str, Any]:
+    """
+    Full indexing pipeline: load chunks → embed → store in ChromaDB.
+
+    Args:
+        reset: if True, wipe existing index before adding new vectors
+
+    Returns:
+        state dict saved to models/state/index_state.json
+    """
     config = load_config()
     processed = resolve_path(processed_dir or config["paths"]["processed_dir"])
     store_dir = vector_store_dir or config["paths"]["vector_store_dir"]
@@ -127,7 +168,7 @@ def build_index(
         texts,
         batch_size=embed_cfg["batch_size"],
         show_progress_bar=True,
-        normalize_embeddings=True,
+        normalize_embeddings=True,  # unit-length vectors for cosine similarity
     ).tolist()
 
     index = VectorIndex(store_dir)
@@ -149,6 +190,7 @@ def build_index(
 
 
 def main() -> None:
+    """CLI entry point: python scripts/run_embed.py"""
     parser = argparse.ArgumentParser(description="Stage 2: embed and index chunks")
     parser.add_argument("--no-reset", action="store_true", help="Append without resetting index")
     args = parser.parse_args()

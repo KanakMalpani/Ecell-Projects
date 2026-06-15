@@ -1,3 +1,14 @@
+/**
+ * Shared TypeScript types for the E-Cell Store frontend.
+ *
+ * These types describe the shape of data returned by API routes.
+ * They mirror the Prisma database models but are simplified for the UI.
+ * Import them with: import type { Product } from "@/types"
+ */
+
+// ─── Product & Category ───────────────────────────────────────────────────────
+
+/** A product in the store catalog. */
 export type Product = {
   id: string;
   name: string;
@@ -11,6 +22,7 @@ export type Product = {
   category?: { id: string; name: string; slug: string };
 };
 
+/** A product category (e.g. Electronics, Fashion). */
 export type Category = {
   id: string;
   name: string;
@@ -18,6 +30,9 @@ export type Category = {
   _count?: { products: number };
 };
 
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+/** A customer order with line items and shipping details. */
 export type Order = {
   id: string;
   orderNumber: string;
@@ -42,6 +57,9 @@ export type Order = {
   user?: { name: string; email: string };
 };
 
+// ─── Marketing ────────────────────────────────────────────────────────────────
+
+/** A homepage promotional banner image with optional link. */
 export type Banner = {
   id: string;
   title: string;
@@ -50,6 +68,7 @@ export type Banner = {
   link: string | null;
 };
 
+/** A discount coupon — either percentage off or a fixed rupee amount. */
 export type Coupon = {
   id: string;
   code: string;
@@ -62,6 +81,9 @@ export type Coupon = {
   usedCount: number;
 };
 
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+/** Dashboard metrics shown on the admin analytics page. */
 export type Analytics = {
   totalRevenue: number;
   recentRevenue: number;
@@ -75,6 +97,7 @@ export type Analytics = {
   totalCustomers: number;
 };
 
+/** A saved shipping address for a logged-in user. */
 export type Address = {
   id: string;
   label: string;

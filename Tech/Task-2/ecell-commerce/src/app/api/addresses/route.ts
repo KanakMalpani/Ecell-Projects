@@ -1,3 +1,9 @@
+/**
+ * Addresses API — saved shipping addresses for logged-in users.
+ *
+ * GET  /api/addresses  — list user's addresses
+ * POST /api/addresses  — add a new address
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";

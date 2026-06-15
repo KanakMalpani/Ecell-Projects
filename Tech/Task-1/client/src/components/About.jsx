@@ -1,3 +1,14 @@
+/**
+ * About — company overview and mission section.
+ *
+ * Layout: two columns
+ *   Left:  company description + 3 bullet points
+ *   Right: mission card with "Founded" and "Shipments/Year" stats
+ *
+ * Animation: slides in from left/right when scrolled into view.
+ *   whileInView  — triggers animation when element enters the viewport
+ *   viewport={{ once: true }} — only animates once (not on every scroll)
+ */
 import { motion } from "framer-motion";
 import { company } from "../data/site";
 
@@ -5,6 +16,7 @@ export default function About() {
   return (
     <section id="about" className="bg-gnn-slate py-16 md:py-20">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 md:grid-cols-2 md:items-center md:px-6">
+        {/* Left: company overview text */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           whileInView={{ opacity: 1, x: 0 }}
@@ -20,6 +32,7 @@ export default function About() {
           </ul>
         </motion.div>
 
+        {/* Right: mission card with key stats */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           whileInView={{ opacity: 1, x: 0 }}

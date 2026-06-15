@@ -1,3 +1,9 @@
+/**
+ * Orders API — list and create orders.
+ *
+ * GET  /api/orders  — user's orders (or all orders if admin)
+ * POST /api/orders  — checkout: create order, apply coupon, decrement stock
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, requireAdmin } from "@/lib/auth";

@@ -1,3 +1,12 @@
+/**
+ * CartContext — shopping cart state persisted in localStorage.
+ *
+ * Unlike auth (server cookie), the cart lives entirely in the browser
+ * so guests can add items before logging in. Data syncs to localStorage
+ * on every change so it survives page refreshes.
+ *
+ * Use useCart() in any client component to read/add/remove cart items.
+ */
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
@@ -23,12 +32,13 @@ type CartContextType = {
 };
 
 const CartContext = createContext<CartContextType | null>(null);
-const CART_KEY = "ecell_cart";
+const CART_KEY = "ecell_cart"; // localStorage key for cart persistence
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loaded, setLoaded] = useState(false);
 
+  // Restore cart from localStorage on first mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(CART_KEY);
@@ -39,12 +49,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setLoaded(true);
   }, []);
 
+  // Save cart to localStorage whenever items change (after initial load)
   useEffect(() => {
     if (loaded) {
       localStorage.setItem(CART_KEY, JSON.stringify(items));
     }
   }, [items, loaded]);
 
+  // Merge into existing line item or add new; never exceed available stock
   const addItem = useCallback(
     (item: Omit<CartItem, "quantity">, quantity = 1) => {
       setItems((prev) => {
@@ -91,6 +103,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** Hook to access cart state — must be used inside <CartProvider>. */
 export function useCart() {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error("useCart must be used within CartProvider");

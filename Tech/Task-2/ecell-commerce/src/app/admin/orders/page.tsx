@@ -1,3 +1,9 @@
+/**
+ * Admin orders page — view and manage all customer orders.
+ *
+ * Fetches all orders from /api/orders (admin sees every order, not just their own).
+ * Dropdown lets admin change order status (PENDING → DELIVERED, etc.).
+ */
 "use client";
 
 import { useEffect, useState } from "react";

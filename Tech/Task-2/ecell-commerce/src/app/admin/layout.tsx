@@ -1,3 +1,12 @@
+/**
+ * Admin Layout — sidebar navigation for the admin dashboard.
+ *
+ * Protects all /admin/* routes: redirects non-admins to /login.
+ * Uses a fixed left sidebar with links to Analytics, Products, Orders,
+ * Coupons, and Banners. Children render in the main content area.
+ *
+ * "use client" because it checks auth state and uses useRouter/usePathname.
+ */
 "use client";
 
 import Link from "next/link";
@@ -27,6 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
 
+  // Redirect to login if user is not an admin
   useEffect(() => {
     if (!loading && (!user || user.role !== "ADMIN")) {
       router.push("/login?redirect=/admin");

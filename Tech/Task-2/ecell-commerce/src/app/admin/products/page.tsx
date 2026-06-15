@@ -1,3 +1,9 @@
+/**
+ * Admin products page — CRUD for the product catalog.
+ *
+ * Lists all products with edit/delete actions.
+ * Modal form creates or updates products via POST/PUT to /api/products.
+ */
 "use client";
 
 import { useEffect, useState } from "react";

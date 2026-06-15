@@ -1,3 +1,10 @@
+/**
+ * Single product API — get, update, or delete by slug.
+ *
+ * GET    /api/products/[slug]  — public product detail
+ * PUT    /api/products/[slug]  — admin only: update product
+ * DELETE /api/products/[slug]  — admin only: delete product
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";

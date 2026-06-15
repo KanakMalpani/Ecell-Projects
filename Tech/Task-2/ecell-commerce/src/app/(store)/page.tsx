@@ -1,3 +1,9 @@
+/**
+ * Home page — storefront landing (Server Component).
+ *
+ * Fetches featured products and active banners directly from Prisma (no API call).
+ * Renders hero, category links, product grid, testimonials, and trust badges.
+ */
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Shield, Truck, RefreshCw, Star } from "lucide-react";

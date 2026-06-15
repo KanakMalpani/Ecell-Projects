@@ -1,3 +1,9 @@
+/**
+ * Footer — site-wide footer with branding, shop links, and support links.
+ *
+ * This is a Server Component (no "use client") because it only renders
+ * static links and text — no interactivity needed.
+ */
 import Link from "next/link";
 
 export default function Footer() {

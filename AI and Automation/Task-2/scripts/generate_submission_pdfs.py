@@ -1,5 +1,15 @@
 #!/usr/bin/env python
-"""Generate submission PDFs: presentation deck and system report."""
+"""
+Generate submission PDFs: presentation deck and system report.
+
+Reads evaluation metrics from reports/metrics_comparison.csv and the
+markdown system report, then builds two PDFs in submission/:
+  - Task-2-Presentation.pdf  (slide deck overview)
+  - SYSTEM_REPORT.pdf        (full architecture report)
+
+Run AFTER evaluation: python scripts/run_evaluate.py && python scripts/generate_submission_pdfs.py
+Requires: pip install reportlab
+"""
 
 from __future__ import annotations
 

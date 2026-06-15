@@ -1,3 +1,13 @@
+/**
+ * Hero — the first section visitors see (above the fold).
+ *
+ * Layout: two columns on desktop, stacked on mobile
+ *   Left:  headline, tagline, two CTA buttons
+ *   Right: warehouse image + 3 stat cards (fleet, cities, on-time rate)
+ *
+ * Animation: left column fades up, right column scales in (Framer Motion).
+ * Section id="home" is the target for the navbar "Home" link.
+ */
 import { motion } from "framer-motion";
 import { company } from "../data/site";
 
@@ -5,9 +15,10 @@ export default function Hero() {
   return (
     <section id="home" className="bg-gnn-navy text-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-2 md:items-center md:px-6 md:py-24">
+        {/* Left column — text content */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 24 }}   // start invisible, shifted down
+          animate={{ opacity: 1, y: 0 }}   // fade in and move to position
           transition={{ duration: 0.6 }}
         >
           <p className="mb-3 inline-block rounded-full bg-gnn-gold px-3 py-1 text-xs font-bold uppercase tracking-wide text-gnn-navy">
@@ -17,6 +28,8 @@ export default function Hero() {
             Delivering reliability across every mile.
           </h1>
           <p className="mt-4 max-w-xl text-base text-white/80 md:text-lg">{company.tagline}</p>
+
+          {/* CTA buttons — primary (red) and secondary (outline) */}
           <div className="mt-8 flex flex-wrap gap-3">
             <a
               href="#contact"
@@ -33,6 +46,7 @@ export default function Hero() {
           </div>
         </motion.div>
 
+        {/* Right column — image and stat cards */}
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -47,6 +61,7 @@ export default function Hero() {
             width="900"
             height="600"
           />
+          {/* Three quick-stat cards below the image */}
           <div className="mt-4 grid grid-cols-3 gap-3 text-center text-sm">
             <div className="rounded-xl bg-white/10 p-3">
               <p className="text-2xl font-bold text-gnn-gold">120+</p>

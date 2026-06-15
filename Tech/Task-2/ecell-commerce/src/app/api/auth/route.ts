@@ -1,3 +1,14 @@
+/**
+ * Auth API — register, login, and logout.
+ *
+ * Next.js App Router API route: src/app/api/auth/route.ts → /api/auth
+ *
+ * POST   /api/auth  — register a new user (creates account + sets JWT cookie)
+ * PUT    /api/auth  — login with email/password (sets JWT cookie)
+ * DELETE /api/auth  — logout (clears JWT cookie)
+ *
+ * The JWT is stored in an httpOnly cookie so JavaScript can't steal it.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";

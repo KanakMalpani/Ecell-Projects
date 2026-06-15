@@ -1,3 +1,10 @@
+/**
+ * Order detail page — single order view with tracking timeline.
+ *
+ * Fetches order by ID from /api/orders/[id].
+ * Shows line items, shipping address, payment status, and a visual
+ * progress bar through CONFIRMED → PROCESSING → SHIPPED → DELIVERED.
+ */
 "use client";
 
 import { useEffect, useState } from "react";

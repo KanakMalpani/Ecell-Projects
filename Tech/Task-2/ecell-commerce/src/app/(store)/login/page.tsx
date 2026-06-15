@@ -1,3 +1,9 @@
+/**
+ * Login page — sign in with email and password.
+ *
+ * Calls AuthContext.login() which POSTs to /api/auth.
+ * Supports ?redirect= query param to return user after login (e.g. from checkout).
+ */
 "use client";
 
 import { Suspense, useState } from "react";

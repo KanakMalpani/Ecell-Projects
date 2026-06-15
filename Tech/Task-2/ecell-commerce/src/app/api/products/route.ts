@@ -1,3 +1,9 @@
+/**
+ * Products API — list and create products.
+ *
+ * GET  /api/products  — public catalog with filters (category, search, price, sort)
+ * POST /api/products  — admin only: create a new product
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";

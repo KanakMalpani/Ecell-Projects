@@ -1,3 +1,9 @@
+/**
+ * Register page — create a new customer account.
+ *
+ * Calls AuthContext.register() which POSTs to /api/auth with action "register".
+ * On success, redirects to the home page with the user logged in.
+ */
 "use client";
 
 import { useState } from "react";

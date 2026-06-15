@@ -1,5 +1,13 @@
 #!/usr/bin/env python
-"""Generate a sample PDF document for demo ingestion."""
+"""
+Generate a sample PDF document for demo ingestion.
+
+Creates data/raw/backup_recovery_sop.pdf — a fictional IT backup SOP.
+Useful if you need an extra PDF to test the ingestion pipeline.
+
+Usage: python scripts/create_sample_pdf.py
+Requires: pip install reportlab
+"""
 
 import sys
 from pathlib import Path
@@ -16,6 +24,7 @@ except ImportError:
 
 OUTPUT = ROOT / "data" / "raw" / "backup_recovery_sop.pdf"
 
+# Fictional backup & recovery SOP content for demonstration
 CONTENT = [
     "STANDARD OPERATING PROCEDURE: DATA BACKUP AND RECOVERY",
     "SOP-IT-BKP-007 | Version 2.0 | Owner: Infrastructure Team",

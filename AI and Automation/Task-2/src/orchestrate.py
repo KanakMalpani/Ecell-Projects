@@ -1,4 +1,19 @@
-"""Stage 3: LLM inference and context orchestration."""
+"""
+Stage 3: LLM inference and context orchestration.
+
+This is the core RAG logic. When a user asks a question:
+
+  1. RETRIEVE  — embed the question, search ChromaDB for similar chunks
+  2. RERANK    — (optional) cross-encoder re-scores chunks for precision
+  3. BUILD CONTEXT — assemble top chunks into a prompt for the LLM
+  4. GENERATE  — send prompt to Ollama (local LLM) and get an answer
+  5. GUARDRAILS — abstain if no relevant context; cite sources; score confidence
+
+Three pipeline modes (benchmarked in evaluate.py):
+  local_llm      — vector search + Ollama
+  reranked_local — cross-encoder rerank + Ollama  ← recommended
+  extractive     — vector search only, no LLM (baseline)
+"""
 
 from __future__ import annotations
 
@@ -12,13 +27,17 @@ from dotenv import load_dotenv
 from sentence_transformers import CrossEncoder, SentenceTransformer
 
 from src.embed import RetrievedChunk, VectorIndex
+from src.text_preprocessor import TextPreprocessor
 from src.utils import load_config, resolve_path, save_json, setup_logging
 
 load_dotenv()
 logger = setup_logging("orchestrate")
 
+# Available pipeline modes
 PipelineMode = Literal["local_llm", "api_llm", "reranked_gemini", "reranked_local", "extractive"]
 
+# System prompt template sent to the LLM with retrieved context injected.
+# {context} = retrieved document chunks, {query} = user question
 SYSTEM_PROMPT = """You are an enterprise knowledge assistant. Answer ONLY using the provided context.
 
 Rules:
@@ -38,16 +57,18 @@ Answer:"""
 
 @dataclass
 class SourceMetadata:
+    """Citation info for one retrieved chunk shown in the API response."""
     source_file: str
     doc_type: str
     section_hint: str
     similarity: float
     distance: float
-    excerpt: str
+    excerpt: str  # first 240 chars of the chunk text
 
 
 @dataclass
 class QueryResult:
+    """Complete result returned by RAGPipeline.query()."""
     answer: str
     confidence: float
     sources: list[SourceMetadata]
@@ -57,6 +78,12 @@ class QueryResult:
 
 
 class RAGPipeline:
+    """
+    Main RAG orchestrator — wires retrieval, reranking, and LLM together.
+
+    Instantiate once at API startup; reuse for every /query request.
+    """
+
     def __init__(self, mode: PipelineMode = "reranked_local"):
         self.config = load_config()
         self.mode = mode
@@ -64,19 +91,40 @@ class RAGPipeline:
         self.llm_cfg = self.config["llm"]
         self.guardrails = self.config["anti_hallucination"]
 
+        # Embedding model for query encoding (same model used in Stage 2)
         embed_model = self.config["embedding"]["model_name"]
         self.embedder = SentenceTransformer(embed_model)
         self.index = VectorIndex(self.config["paths"]["vector_store_dir"])
+
+        # NLTK preprocessor for query tokenization and stop-word removal
+        pre_cfg = self.config.get("preprocessing", {})
+        self.preprocessor = TextPreprocessor(
+            remove_stopwords=pre_cfg.get("remove_stopwords", True),
+            lemmatize=pre_cfg.get("lemmatize", True),
+            min_token_length=pre_cfg.get("min_token_length", 2),
+        )
+
+        # Cross-encoder reranker — only loaded for "reranked_*" modes
         self.reranker: CrossEncoder | None = None
         if "reranked" in mode:
             self.reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
     def _retrieve(self, query: str) -> list[RetrievedChunk]:
-        query_emb = self.embedder.encode(query, normalize_embeddings=True).tolist()
+        """
+        Step 1+2: Vector search (+ optional reranking).
+
+        1. Embed the user query
+        2. Fetch top_k candidates from ChromaDB
+        3. If reranker enabled: re-score each (query, chunk) pair
+        4. Filter out chunks below similarity_threshold
+        """
+        # Preprocess query: NLTK tokenize + stop-word removal + lemmatization
+        processed_query = self.preprocessor.preprocess(query) or query
+        query_emb = self.embedder.encode(processed_query, normalize_embeddings=True).tolist()
         candidates = self.index.query(query_emb, top_k=self.retrieval_cfg["top_k"])
 
         if self.reranker is not None:
-            pairs = [[query, c.text] for c in candidates]
+            pairs = [[processed_query, c.text] for c in candidates]
             scores = self.reranker.predict(pairs)
             ranked = sorted(
                 zip(candidates, scores),
@@ -91,6 +139,12 @@ class RAGPipeline:
         return [c for c in candidates if c.similarity >= threshold]
 
     def _build_context(self, chunks: list[RetrievedChunk]) -> str:
+        """
+        Step 3: Assemble retrieved chunks into a single context string for the LLM.
+
+        Each chunk is labelled with its source file and similarity score.
+        Stops adding chunks when max_context_tokens is reached.
+        """
         parts: list[str] = []
         total_tokens = 0
         max_tokens = self.guardrails["max_context_tokens"]
@@ -108,6 +162,11 @@ class RAGPipeline:
         return "\n\n---\n\n".join(parts)
 
     def _compute_confidence(self, chunks: list[RetrievedChunk], answer: str) -> float:
+        """
+        Estimate how confident we are in the answer (0.0 to 0.99).
+
+        Based on retrieval similarity scores. Returns 0.1 if the model abstained.
+        """
         if not chunks:
             return 0.0
         abstain = self.guardrails["abstain_phrase"].lower()
@@ -118,6 +177,7 @@ class RAGPipeline:
         return round(min(0.99, 0.5 * avg_sim + 0.5 * top_sim), 2)
 
     def _generate_gemini(self, prompt: str) -> str:
+        """Call Google Gemini API (optional cloud LLM — requires GEMINI_API_KEY)."""
         import google.generativeai as genai
 
         api_key = os.getenv("GEMINI_API_KEY")
@@ -137,6 +197,12 @@ class RAGPipeline:
         return (response.text or "").strip()
 
     def _generate_ollama(self, prompt: str, user_query: str) -> str:
+        """
+        Call local Ollama LLM (default — no API key needed).
+
+        Tries /api/chat first, falls back to /api/generate.
+        If Ollama is offline, uses _fallback_answer instead.
+        """
         base = self.llm_cfg["ollama_base_url"].rstrip("/")
         timeout = float(self.llm_cfg.get("ollama_timeout_seconds", 120))
         options = {
@@ -177,7 +243,12 @@ class RAGPipeline:
         return self._fallback_answer(user_query, prompt)
 
     def _fallback_answer(self, query: str, prompt: str) -> str:
-        """Deterministic fallback when LLM backend is unavailable."""
+        """
+        Deterministic fallback when the LLM is unavailable.
+
+        Finds the most keyword-matching lines from the retrieved context
+        and returns them directly (no LLM generation).
+        """
         context_start = prompt.find("Context:")
         context_end = prompt.find("Question:")
         if context_start == -1 or context_end == -1:
@@ -191,11 +262,11 @@ class RAGPipeline:
         if not lines:
             return self.guardrails["abstain_phrase"]
 
-        query_terms = {t.lower() for t in query.split() if len(t) > 3}
+        query_terms = self.preprocessor.extract_keywords(query)
         scored: list[tuple[int, str]] = []
         for line in lines:
-            lower = line.lower()
-            score = sum(1 for term in query_terms if term in lower)
+            line_terms = self.preprocessor.extract_keywords(line)
+            score = len(query_terms & line_terms)
             if score:
                 scored.append((score, line))
         if scored:
@@ -206,6 +277,7 @@ class RAGPipeline:
         return f"Based on retrieved documents: {summary[:800]}"
 
     def _generate(self, prompt: str, user_query: str) -> str:
+        """Route to the right LLM backend based on pipeline mode and config."""
         if self.mode == "extractive":
             return self._fallback_answer(user_query, prompt)
 
@@ -218,9 +290,15 @@ class RAGPipeline:
         return self._generate_ollama(prompt, user_query)
 
     def query(self, user_query: str) -> QueryResult:
+        """
+        Main entry point — run the full RAG pipeline for one question.
+
+        Returns answer, confidence, source citations, and latency.
+        """
         start = time.perf_counter()
         chunks = self._retrieve(user_query)
 
+        # No relevant chunks found → abstain immediately
         if not chunks:
             latency = (time.perf_counter() - start) * 1000
             return QueryResult(
@@ -264,6 +342,7 @@ class RAGPipeline:
 
 
 def save_pipeline_state(mode: PipelineMode) -> None:
+    """Save active pipeline config to models/state/pipeline_state.json."""
     config = load_config()
     state = {
         "active_pipeline": mode,
@@ -278,6 +357,7 @@ def save_pipeline_state(mode: PipelineMode) -> None:
 
 
 def result_to_dict(result: QueryResult) -> dict[str, Any]:
+    """Convert QueryResult dataclass to a plain dict for the API response."""
     payload = asdict(result)
     payload["sources"] = [asdict(s) for s in result.sources]
     return payload
