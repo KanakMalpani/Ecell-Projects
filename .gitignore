@@ -20,6 +20,14 @@ AI and Automation/Task-1/catboost_info/
 AI and Automation/Task-1/LOCAL_DEMO_GUIDE.md
 AI and Automation/Task-1/video/
 
+# AI and Automation Task-3 generated artifacts
+AI and Automation/Task-3/.env
+AI and Automation/Task-3/data/*.db
+AI and Automation/Task-3/data/synthetic_crm_dataset.json
+AI and Automation/Task-3/reports/*.json
+AI and Automation/Task-3/reports/*.pdf
+!AI and Automation/Task-3/submission/*.pdf
+
 # OS
 .DS_Store
 Thumbs.db

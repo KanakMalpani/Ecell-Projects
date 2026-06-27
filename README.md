@@ -11,7 +11,8 @@ E-Cell/
 │   └── Task-2/          # E-Cell commerce app (Next.js)
 └── AI and Automation/
     ├── Task-1/          # 10-K SEC filing risk classification
-    └── Task-2/          # Enterprise RAG knowledge retrieval
+    ├── Task-2/          # Enterprise RAG knowledge retrieval
+    └── Task-3/          # AI-integrated CRM with Ollama agents
 ```
 
 ## Tech
@@ -35,6 +36,10 @@ See [AI and Automation/Task-1/README.md](AI%20and%20Automation/Task-1/README.md)
 **Task 2:** Enterprise knowledge management and semantic retrieval (RAG) system with Ollama.
 
 See [AI and Automation/Task-2/README.md](AI%20and%20Automation/Task-2/README.md) for setup and run instructions.
+
+**Task 3:** AI-integrated CRM platform with LangGraph agents, cohort analysis, and HEART metrics (Ollama local LLM).
+
+See [AI and Automation/Task-3/README.md](AI%20and%20Automation/Task-3/README.md) for setup and run instructions.
 
 ## GitHub
 

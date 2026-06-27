@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-Cell CRM — HEART Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --bg: #0f1419; --card: #1a2332; --accent: #3b82f6; --text: #e2e8f0; --muted: #94a3b8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { padding: 1.5rem 2rem; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 1.4rem; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; padding: 1.5rem 2rem; }
+    .card { background: var(--card); border-radius: 12px; padding: 1.25rem; border: 1px solid #334155; }
+    .card h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.75rem; }
+    .metric { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .sub { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+    .wide { grid-column: 1 / -1; }
+    canvas { max-height: 280px; }
+    button { background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+    button:hover { opacity: 0.9; }
+    .auth { display: flex; gap: 0.5rem; align-items: center; }
+    input { background: #0f1419; border: 1px solid #475569; color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; }
+    #status { font-size: 0.8rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>E-Cell AI CRM — HEART & Cohort Dashboard</h1>
+      <p id="status">Login to load live metrics</p>
+    </div>
+    <div class="auth">
+      <input id="user" placeholder="username" value="analytics1" />
+      <input id="pass" type="password" placeholder="password" value="analytics123" />
+      <button onclick="login()">Connect</button>
+    </div>
+  </header>
+
+  <div class="grid" id="metrics-grid"></div>
+  <div class="grid">
+    <div class="card wide">
+      <h2>Retention Curve (Primary Cohort)</h2>
+      <canvas id="retentionChart"></canvas>
+    </div>
+    <div class="card wide">
+      <h2>HEART Dimensions Overview</h2>
+      <canvas id="heartChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+    let token = localStorage.getItem('crm_token') || '';
+
+    async function login() {
+      const username = document.getElementById('user').value;
+      const password = document.getElementById('pass').value;
+      const res = await fetch(`${API}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) { document.getElementById('status').textContent = 'Login failed'; return; }
+      const data = await res.json();
+      token = data.access_token;
+      localStorage.setItem('crm_token', token);
+      document.getElementById('status').textContent = `Connected as ${username} (${data.role})`;
+      loadDashboard();
+    }
+
+    async function apiGet(path) {
+      const res = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    function card(title, value, sub = '') {
+      return `<div class="card"><h2>${title}</h2><div class="metric">${value}</div><div class="sub">${sub}</div></div>`;
+    }
+
+    let retentionChart, heartChart;
+
+    async function loadDashboard() {
+      const [heart, cohort] = await Promise.all([
+        apiGet('/api/v1/heart'),
+        apiGet('/api/v1/cohorts/analysis')
+      ]);
+      const h = heart.heart_scores;
+      const grid = document.getElementById('metrics-grid');
+      grid.innerHTML = [
+        card('Happiness (CSAT)', h.happiness.avg_csat, `NPS proxy: ${h.happiness.nps_proxy}`),
+        card('Engagement', h.engagement.active_customers, `${h.engagement.total_customers} total customers`),
+        card('Adoption', (h.adoption.ai_assisted_ticket_rate * 100).toFixed(1) + '%', 'AI-assisted ticket rate'),
+        card('Retention', (h.retention.monthly_retention * 100).toFixed(1) + '%', `${h.retention.churn_flags} churn flags`),
+        card('Task Success', (h.task_success.resolution_rate * 100).toFixed(1) + '%', `FCR proxy: ${(h.task_success.first_contact_resolution_proxy * 100).toFixed(1)}%`),
+        card('Churn Rate', (cohort.churn_rate * 100).toFixed(1) + '%', cohort.cohort_id)
+      ].join('');
+
+      const curve = cohort.retention_curve || [];
+      const labels = curve.map(p => `M+${p.period}`);
+      const rates = curve.map(p => (p.retention_rate * 100).toFixed(1));
+
+      if (retentionChart) retentionChart.destroy();
+      retentionChart = new Chart(document.getElementById('retentionChart'), {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Retention %', data: rates, borderColor: '#3b82f6', tension: 0.3, fill: false }] },
+        options: { scales: { y: { min: 0, max: 100 } }, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+      });
+
+      const heartLabels = ['Happiness', 'Engagement', 'Adoption', 'Retention', 'Task Success'];
+      const heartValues = [
+        h.happiness.avg_csat / 5 * 100,
+        h.engagement.avg_engagement_score,
+        h.adoption.feature_adoption_proxy * 100,
+        h.retention.monthly_retention * 100,
+        h.task_success.resolution_rate * 100
+      ];
+
+      if (heartChart) heartChart.destroy();
+      heartChart = new Chart(document.getElementById('heartChart'), {
+        type: 'bar',
+        data: { labels: heartLabels, datasets: [{ label: 'Score', data: heartValues, backgroundColor: '#3b82f6' }] },
+        options: { scales: { y: { min: 0, max: 100 } }, plugins: { legend: { display: false } } }
+      });
+    }
+
+    if (token) login();
+  </script>
+</body>
+</html>
