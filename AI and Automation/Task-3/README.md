@@ -95,6 +95,7 @@ python -m src.heart
 ## Deliverables
 
 - `SYSTEM_REPORT.md` — architecture, HEART definitions, cohort methodology, agent design  
+- `SECURITY.md` — auth, secrets, and deployment hardening  
 - `reports/` — exported cohort JSON/PDF  
 - `data/synthetic_crm_dataset.json` — generated dataset  
 
