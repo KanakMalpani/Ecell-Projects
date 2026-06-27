@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,10 +24,11 @@ from pydantic import BaseModel, EmailStr, Field
 from src.agents import agent_workflow
 from src.auth import authenticate_user, create_access_token, require_permission
 from src.cohort import cohort_engine
-from src.config import ROOT
+from src.config import ALLOWED_ORIGINS, MAX_LIST_LIMIT, ROOT
 from src.crm import TICKET_STATUSES, crm_service
 from src.database import get_db, now_iso
 from src.heart import heart_service
+from src.security import safe_report_path
 
 logger = logging.getLogger("api")
 
@@ -41,9 +42,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 DASHBOARD_DIR = ROOT / "dashboard"
@@ -54,8 +56,8 @@ if DASHBOARD_DIR.exists():
 # ── Request / Response models ──────────────────────────────────────────────
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(..., min_length=1, max_length=64)
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 class CustomerCreate(BaseModel):
@@ -161,7 +163,7 @@ def create_customer(
 def list_customers(
     industry: str | None = None,
     segment: str | None = None,
-    limit: int = 100,
+    limit: int = Query(100, ge=1, le=MAX_LIST_LIMIT),
     user: dict = Depends(require_permission("customers:read")),
 ) -> dict[str, Any]:
     start = time.perf_counter()
@@ -349,10 +351,11 @@ def export_cohort_pdf(
 
 
 @app.get("/api/v1/reports/{filename}")
-def download_report(filename: str) -> FileResponse:
-    path = ROOT / "reports" / filename
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Report not found")
+def download_report(
+    filename: str,
+    user: dict = Depends(require_permission("cohorts:read")),
+) -> FileResponse:
+    path = safe_report_path(ROOT / "reports", filename)
     return FileResponse(path)
 
 

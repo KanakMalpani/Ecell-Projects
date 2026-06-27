@@ -32,8 +32,8 @@
       <p id="status">Login to load live metrics</p>
     </div>
     <div class="auth">
-      <input id="user" placeholder="username" value="analytics1" />
-      <input id="pass" type="password" placeholder="password" value="analytics123" />
+      <input id="user" placeholder="username" autocomplete="username" />
+      <input id="pass" type="password" placeholder="password" autocomplete="current-password" />
       <button onclick="login()">Connect</button>
     </div>
   </header>
@@ -52,7 +52,7 @@
 
   <script>
     const API = window.location.origin;
-    let token = localStorage.getItem('crm_token') || '';
+    let token = sessionStorage.getItem('crm_token') || '';
 
     async function login() {
       const username = document.getElementById('user').value;
@@ -65,7 +65,7 @@
       if (!res.ok) { document.getElementById('status').textContent = 'Login failed'; return; }
       const data = await res.json();
       token = data.access_token;
-      localStorage.setItem('crm_token', token);
+      sessionStorage.setItem('crm_token', token);
       document.getElementById('status').textContent = `Connected as ${username} (${data.role})`;
       loadDashboard();
     }

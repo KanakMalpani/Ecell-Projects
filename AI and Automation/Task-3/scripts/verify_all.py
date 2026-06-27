@@ -148,6 +148,31 @@ def main() -> None:
     except Exception as exc:
         print(f"  [SKIP] API not running: {exc}")
 
+    # 7. Security checks
+    print("\n7. Security")
+    try:
+        import httpx
+        base = "http://127.0.0.1:8002"
+        r = httpx.get(f"{base}/api/v1/reports/cohort_analysis_test.json", timeout=3)
+        check("reports deny anonymous download", r.status_code != 200, str(r.status_code))
+        r2 = httpx.get(f"{base}/api/v1/reports/..%2F..%2Fetc%2Fpasswd", timeout=3)
+        check("path traversal blocked", r2.status_code in (400, 401, 403, 404), str(r2.status_code))
+    except Exception as exc:
+        print(f"  [SKIP] Security API checks: {exc}")
+
+    from src.auth import USERS, verify_password
+    sample = next(iter(USERS.values()))
+    check("passwords stored as hashes", "password_hash" in sample and "password" not in sample)
+    check("pbkdf2 verification", verify_password("wrong", sample["password_hash"]) is False)
+
+    from fastapi import HTTPException
+    from src.security import safe_report_path
+    try:
+        safe_report_path(ROOT / "reports", "../../../etc/passwd")
+        check("safe_report_path blocks traversal", False)
+    except HTTPException as exc:
+        check("safe_report_path blocks traversal", exc.status_code in (400, 403))
+
     print("\n=== Summary ===")
     if FAILURES:
         print(f"FAILED: {len(FAILURES)} check(s)")
