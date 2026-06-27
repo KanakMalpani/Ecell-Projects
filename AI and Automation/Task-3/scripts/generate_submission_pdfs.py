@@ -6,7 +6,7 @@ Outputs in submission/:
   - Task-3-Presentation.pdf
   - SYSTEM_REPORT.pdf
 
-Run: python scripts/generate_charts.py && python scripts/generate_submission_pdfs.py
+Run: python scripts/generate_submission_pdfs.py
 """
 
 from __future__ import annotations
@@ -22,7 +22,16 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.platypus import Image, PageBreak, Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import (
+    Image,
+    PageBreak,
+    Paragraph,
+    Preformatted,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 SUBMISSION_DIR = ROOT / "submission"
 SYSTEM_REPORT_MD = ROOT / "SYSTEM_REPORT.md"
@@ -36,6 +45,23 @@ def _clean_inline(text: str) -> str:
     text = re.sub(r"`(.+?)`", r"<font face='Courier' size='9'>\1</font>", text)
     text = text.replace("→", "-&gt;").replace("—", "-")
     return text
+
+
+def _load_live_metrics() -> dict:
+    from src.cohort import cohort_engine
+    from src.heart import heart_service
+
+    heart = heart_service.compute_all()
+    churn = cohort_engine.train_churn_model()
+    cid = cohort_engine.largest_cohort() or "all"
+    curve = cohort_engine.retention_curve(cid) if cid != "all" else []
+    m6 = curve[-1]["retention_rate"] if curve else heart["retention"]["monthly_retention"]
+    return {
+        "heart": heart,
+        "churn": churn,
+        "cohort_id": cid,
+        "month6_retention": m6,
+    }
 
 
 def slide_canvas(title: str, bullets: list[str], subtitle: str = "") -> list:
@@ -64,7 +90,55 @@ def slide_canvas(title: str, bullets: list[str], subtitle: str = "") -> list:
     return story
 
 
-def build_presentation_pdf(output: Path) -> None:
+def metrics_table_slide(metrics: dict) -> list:
+    styles = getSampleStyleSheet()
+    h = metrics["heart"]
+    c = metrics["churn"]
+    story: list = [
+        Paragraph("Evaluation Results (Live CRM Data)", styles["Heading1"]),
+        Spacer(1, 0.2 * inch),
+    ]
+    table_data = [
+        ["Metric", "Value"],
+        ["Avg CSAT (Happiness)", f"{h['happiness']['avg_csat']:.2f} / 5"],
+        ["Active customers (Engagement)", str(h["engagement"]["active_customers"])],
+        ["AI-assisted ticket rate (Adoption)", f"{h['adoption']['ai_assisted_ticket_rate'] * 100:.1f}%"],
+        ["Monthly retention (Retention)", f"{h['retention']['monthly_retention'] * 100:.1f}%"],
+        ["Ticket resolution rate (Task Success)", f"{h['task_success']['resolution_rate'] * 100:.1f}%"],
+        ["Churn model F1", f"{c.get('f1', 0):.2f}"],
+        ["Churn-flagged customers", str(c.get("flagged_customers", "N/A"))],
+        ["Largest cohort M+6 retention", f"{metrics['month6_retention'] * 100:.1f}%"],
+    ]
+    table = Table(table_data, colWidths=[3.2 * inch, 2.5 * inch])
+    table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2b6cb0")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 12),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.Color(0.95, 0.95, 0.95)]),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ])
+    )
+    story.append(table)
+    story.append(PageBreak())
+    return story
+
+
+def chart_slide(title: str, chart_path: Path) -> list:
+    styles = getSampleStyleSheet()
+    story: list = [
+        Paragraph(title, styles["Heading1"]),
+        Spacer(1, 0.2 * inch),
+        Image(str(chart_path), width=7 * inch, height=3.85 * inch),
+        PageBreak(),
+    ]
+    return story
+
+
+def build_presentation_pdf(output: Path, metrics: dict) -> None:
     doc = SimpleDocTemplate(
         str(output),
         pagesize=landscape(letter),
@@ -109,8 +183,8 @@ def build_presentation_pdf(output: Path) -> None:
         "Synthetic Dataset",
         [
             "520 customer profiles across 6 industries and 3 product tiers",
-            "1,050 support tickets with full lifecycle states",
-            "2,500 interaction logs spanning ~6 months",
+            "1,050+ support tickets with full lifecycle states",
+            "2,500+ interaction logs spanning ~6 months",
             "Bulk ingestion with validation and deduplication on startup",
         ],
     )
@@ -122,6 +196,16 @@ def build_presentation_pdf(output: Path) -> None:
             "LangGraph pipeline: load context -&gt; route -&gt; generate -&gt; escalation",
             "Hallucination guard: source citations, confidence scoring, flag unsourced claims",
             "Per-customer short-term + long-term interaction memory",
+        ],
+    )
+
+    story += slide_canvas(
+        "Role-Based Access Control",
+        [
+            "Agent: create/query tickets, run summarization and agent pipeline",
+            "Supervisor: agent permissions + cohort analysis read access",
+            "Admin: full system access across all CRM modules",
+            "Analytics: read-only HEART metrics, cohorts, and customer data",
         ],
     )
 
@@ -147,17 +231,12 @@ def build_presentation_pdf(output: Path) -> None:
         ],
     )
 
-    # Charts slide (if generated from live data)
+    story += metrics_table_slide(metrics)
+
     if HEART_CHART.exists():
-        styles = getSampleStyleSheet()
-        story.append(Paragraph("Evaluation Metrics (Live Data)", styles["Heading1"]))
-        story.append(Spacer(1, 0.15 * inch))
-        img_w = 5.5 * inch
-        story.append(Image(str(HEART_CHART), width=img_w, height=img_w * 0.55))
-        if RETENTION_CHART.exists():
-            story.append(Spacer(1, 0.1 * inch))
-            story.append(Image(str(RETENTION_CHART), width=img_w, height=img_w * 0.55))
-        story.append(PageBreak())
+        story += chart_slide("HEART Metrics Chart", HEART_CHART)
+    if RETENTION_CHART.exists():
+        story += chart_slide(f"Retention Curve - {metrics['cohort_id'][:45]}", RETENTION_CHART)
 
     story += slide_canvas(
         "Live Demo",
@@ -172,15 +251,27 @@ def build_presentation_pdf(output: Path) -> None:
     story += slide_canvas(
         "Deliverables",
         [
-            "Source code: AI and Automation/Task-3/",
+            "Source code: AI and Automation/Task-3/ on GitHub",
             "System report: SYSTEM_REPORT.md + submission/SYSTEM_REPORT.pdf",
             "Presentation: submission/Task-3-Presentation.pdf",
-            "Demo credentials documented in README (demo-only passwords)",
+            "Run: python run_pipeline.py then uvicorn api.app:app --port 8002",
         ],
     )
 
     doc.build(story)
     print(f"Created {output}")
+
+
+def _parse_table_rows(lines: list[str]) -> list[list[str]] | None:
+    rows = []
+    for line in lines:
+        if not line.strip().startswith("|"):
+            return None
+        if re.match(r"^\|[-:\s|]+\|$", line.strip()):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        rows.append(cells)
+    return rows if rows else None
 
 
 def build_system_report_pdf(output: Path) -> None:
@@ -204,22 +295,47 @@ def build_system_report_pdf(output: Path) -> None:
     in_code = False
     in_mermaid = False
     code_lines: list[str] = []
+    table_buffer: list[str] = []
 
     def flush_code() -> None:
         nonlocal code_lines, in_code, in_mermaid
         if code_lines:
             block = "\n".join(code_lines)
-            block = block.replace("──►", "->").replace("│", "|").replace("▼", "v").replace("┌", "+").replace("┐", "+").replace("└", "+").replace("┘", "+")
             story.append(Preformatted(block, code_style))
             story.append(Spacer(1, 0.08 * inch))
         code_lines = []
         in_code = False
         in_mermaid = False
 
+    def flush_table() -> None:
+        nonlocal table_buffer
+        if not table_buffer:
+            return
+        rows = _parse_table_rows(table_buffer)
+        table_buffer = []
+        if not rows:
+            return
+        col_count = max(len(r) for r in rows)
+        widths = [5.5 * inch / col_count] * col_count
+        table = Table(rows, colWidths=widths)
+        table.setStyle(
+            TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#edf2f7")),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ])
+        )
+        story.append(table)
+        story.append(Spacer(1, 0.08 * inch))
+
     for line in text.splitlines():
         stripped = line.strip()
 
         if stripped.startswith("```"):
+            flush_table()
             if in_code:
                 flush_code()
             else:
@@ -229,10 +345,14 @@ def build_system_report_pdf(output: Path) -> None:
             continue
 
         if in_code:
-            if in_mermaid:
-                continue  # skip mermaid diagrams in PDF
-            code_lines.append(line.rstrip())
+            if not in_mermaid:
+                code_lines.append(line.rstrip())
             continue
+
+        if stripped.startswith("|"):
+            table_buffer.append(stripped)
+            continue
+        flush_table()
 
         if not stripped:
             story.append(Spacer(1, 0.06 * inch))
@@ -245,9 +365,6 @@ def build_system_report_pdf(output: Path) -> None:
             story.append(Paragraph(_clean_inline(stripped[4:]), h3))
         elif stripped.startswith("---"):
             story.append(Spacer(1, 0.1 * inch))
-        elif stripped.startswith("|") and "---" not in stripped:
-            safe = _clean_inline(stripped)
-            story.append(Paragraph(f"<font face='Courier' size='8'>{safe}</font>", body))
         elif stripped.startswith("- "):
             story.append(Paragraph(f"&bull; {_clean_inline(stripped[2:])}", body))
         elif re.match(r"^\d+\.\s", stripped):
@@ -255,16 +372,23 @@ def build_system_report_pdf(output: Path) -> None:
         else:
             story.append(Paragraph(_clean_inline(stripped), body))
 
+    flush_table()
     flush_code()
+
+    metrics = _load_live_metrics()
+    story.append(PageBreak())
+    story.append(Paragraph("Appendix A: Live Evaluation Metrics", h2))
+    story.append(Spacer(1, 0.1 * inch))
+    story += metrics_table_slide(metrics)[:-1]  # drop page break
 
     if HEART_CHART.exists():
         story.append(PageBreak())
-        story.append(Paragraph("Appendix: HEART Metrics Chart", h2))
+        story.append(Paragraph("Appendix B: HEART Metrics Chart", h2))
         story.append(Spacer(1, 0.1 * inch))
         story.append(Image(str(HEART_CHART), width=6 * inch, height=3.3 * inch))
     if RETENTION_CHART.exists():
         story.append(Spacer(1, 0.15 * inch))
-        story.append(Paragraph("Appendix: Cohort Retention Curve", h2))
+        story.append(Paragraph("Appendix C: Cohort Retention Curve", h2))
         story.append(Spacer(1, 0.1 * inch))
         story.append(Image(str(RETENTION_CHART), width=6 * inch, height=3.3 * inch))
 
@@ -278,7 +402,8 @@ def main() -> None:
     if charts_script.exists():
         import subprocess
         subprocess.run([sys.executable, str(charts_script)], check=False)
-    build_presentation_pdf(SUBMISSION_DIR / "Task-3-Presentation.pdf")
+    metrics = _load_live_metrics()
+    build_presentation_pdf(SUBMISSION_DIR / "Task-3-Presentation.pdf", metrics)
     build_system_report_pdf(SUBMISSION_DIR / "SYSTEM_REPORT.pdf")
 
 

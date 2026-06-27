@@ -75,6 +75,14 @@ def main() -> None:
     analysis = cohort_engine.full_analysis()
     check("cohort analysis", bool(analysis.get("cohorts")))
     check("churn model metrics", "f1" in analysis.get("churn_model_metrics", {}))
+    f1 = analysis.get("churn_model_metrics", {}).get("f1", 0)
+    check("churn model F1 > 0", f1 > 0, str(f1))
+
+    cid = cohort_engine.largest_cohort()
+    if cid:
+        curve = cohort_engine.retention_curve(cid)
+        rates = [p["retention_rate"] for p in curve]
+        check("retention curve non-zero", max(rates) > 0, str(rates))
 
     customers = crm_service.list_customers(limit=1)
     if customers:

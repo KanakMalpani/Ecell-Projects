@@ -129,12 +129,10 @@ For each cohort, we compute 6 monthly periods:
 **Heuristic score** (production baseline):
 
 ```
-churn_prob = 0.5×(1 - engagement/100) + 0.3×min(tickets/15, 1) + 0.2×(1 - tenure/365)
+churn_prob = 0.5*(1 - engagement/100) + 0.3*min(tickets/15, 1) + 0.2*(1 - tenure/365)
 ```
 
-**Signals:** low_engagement, high_ticket_frequency, early_lifecycle, unresolved_backlog
-
-**ML validation:** Logistic regression on engagement, tickets, tenure — reports precision/recall/F1 on held-out set.
+**ML validation:** Logistic regression on engagement, tickets, tenure. Labels use top-quartile heuristic scores (75th percentile cutoff) with stratified train/test split. Reports precision, recall, and F1 on held-out set.
 
 ### 6.4 Churn Model Evaluation
 

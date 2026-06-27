@@ -36,25 +36,36 @@ class CohortEngine:
     def cohort_customers(self, cohort_id: str) -> list[dict[str, Any]]:
         return crm_service.list_customers(segment=cohort_id, limit=10000)
 
+    def largest_cohort(self) -> str | None:
+        cohorts = self.list_cohorts()
+        if not cohorts:
+            return None
+        return max(cohorts, key=lambda cid: len(self.cohort_customers(cid)))
+
     def retention_curve(self, cohort_id: str, periods: int = 6) -> list[dict[str, float]]:
         customers = self.cohort_customers(cohort_id)
         if not customers:
             return []
-        acq_dates = [c.get("acquisition_date", "")[:10] for c in customers]
-        base_month = min(acq_dates)[:7] if acq_dates else datetime.utcnow().strftime("%Y-%m")
 
         curve = []
         total = len(customers)
         for period in range(periods):
             active = 0
+            eng_threshold = max(25, 78 - period * 9)
             for c in customers:
                 eng = c.get("engagement_score", 0)
-                tenure = c.get("tenure_days", 0)
-                # Active if engagement above threshold at simulated month offset
-                if eng >= max(20, 70 - period * 8) and tenure >= period * 30:
+                tickets = c.get("ticket_count", 0)
+                ticket_penalty = min(tickets * period * 0.4, 12)
+                if eng - ticket_penalty >= eng_threshold:
                     active += 1
             rate = round(active / total, 4) if total else 0.0
-            curve.append({"period": period, "month_offset": period, "retention_rate": rate, "active": active, "total": total})
+            curve.append({
+                "period": period,
+                "month_offset": period,
+                "retention_rate": rate,
+                "active": active,
+                "total": total,
+            })
         return curve
 
     def churn_scores(self, cohort_id: str | None = None) -> list[dict[str, Any]]:
@@ -97,24 +108,36 @@ class CohortEngine:
         if len(customers) < 50:
             return {"precision": 0.0, "recall": 0.0, "f1": 0.0, "note": "insufficient_data"}
 
+        scores = [self._heuristic_churn(c) for c in customers]
+        cutoff = float(np.percentile(scores, 75))
         rows = []
-        for c in customers:
-            label = 1 if self._heuristic_churn(c) >= 0.6 else 0
+        for c, score in zip(customers, scores):
             rows.append({
                 "engagement": c.get("engagement_score", 0),
                 "tickets": c.get("ticket_count", 0),
                 "tenure": c.get("tenure_days", 0),
-                "label": label,
+                "label": 1 if score >= cutoff else 0,
             })
         df = pd.DataFrame(rows)
         X = df[["engagement", "tickets", "tenure"]]
         y = df["label"]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+        stratify = y if y.nunique() > 1 and y.sum() >= 5 else None
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.25, random_state=42, stratify=stratify,
+        )
         model = LogisticRegression(max_iter=500)
         model.fit(X_train, y_train)
         preds = model.predict(X_test)
-        precision, recall, f1, _ = precision_recall_fscore_support(y_test, preds, average="binary", zero_division=0)
-        return {"precision": round(float(precision), 4), "recall": round(float(recall), 4), "f1": round(float(f1), 4)}
+        precision, recall, f1, _ = precision_recall_fscore_support(
+            y_test, preds, average="binary", zero_division=0,
+        )
+        return {
+            "precision": round(float(precision), 4),
+            "recall": round(float(recall), 4),
+            "f1": round(float(f1), 4),
+            "churn_label_cutoff": round(cutoff, 4),
+            "flagged_customers": int((df["label"] == 1).sum()),
+        }
 
     def resolution_metrics(self, cohort_id: str | None = None) -> dict[str, Any]:
         customers = self.cohort_customers(cohort_id) if cohort_id else crm_service.list_customers(limit=10000)

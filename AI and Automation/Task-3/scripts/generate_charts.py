@@ -49,10 +49,7 @@ def chart_heart() -> Path:
 
 
 def chart_retention() -> Path:
-    cohorts = cohort_engine.list_cohorts()
-    if not cohorts:
-        cohorts = ["default"]
-    cid = cohorts[0]
+    cid = cohort_engine.largest_cohort() or "default"
     curve = cohort_engine.retention_curve(cid, periods=6)
     periods = [p["period"] for p in curve]
     rates = [p["retention_rate"] * 100 for p in curve]
