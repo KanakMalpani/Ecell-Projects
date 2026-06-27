@@ -6,12 +6,12 @@ Outputs in submission/:
   - Task-3-Presentation.pdf
   - SYSTEM_REPORT.pdf
 
-Run: python scripts/generate_submission_pdfs.py
-Requires: pip install reportlab
+Run: python scripts/generate_charts.py && python scripts/generate_submission_pdfs.py
 """
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -22,10 +22,20 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, PageBreak, Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle
 
 SUBMISSION_DIR = ROOT / "submission"
 SYSTEM_REPORT_MD = ROOT / "SYSTEM_REPORT.md"
+HEART_CHART = ROOT / "reports" / "heart_metrics.png"
+RETENTION_CHART = ROOT / "reports" / "retention_curve.png"
+
+
+def _clean_inline(text: str) -> str:
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
+    text = re.sub(r"`(.+?)`", r"<font face='Courier' size='9'>\1</font>", text)
+    text = text.replace("→", "-&gt;").replace("—", "-")
+    return text
 
 
 def slide_canvas(title: str, bullets: list[str], subtitle: str = "") -> list:
@@ -49,7 +59,7 @@ def slide_canvas(title: str, bullets: list[str], subtitle: str = "") -> list:
         story.append(Paragraph(subtitle, body_style))
         story.append(Spacer(1, 0.15 * inch))
     for bullet in bullets:
-        story.append(Paragraph(f"&bull; {bullet}", body_style))
+        story.append(Paragraph(f"&bull; {_clean_inline(bullet)}", body_style))
     story.append(PageBreak())
     return story
 
@@ -137,6 +147,18 @@ def build_presentation_pdf(output: Path) -> None:
         ],
     )
 
+    # Charts slide (if generated from live data)
+    if HEART_CHART.exists():
+        styles = getSampleStyleSheet()
+        story.append(Paragraph("Evaluation Metrics (Live Data)", styles["Heading1"]))
+        story.append(Spacer(1, 0.15 * inch))
+        img_w = 5.5 * inch
+        story.append(Image(str(HEART_CHART), width=img_w, height=img_w * 0.55))
+        if RETENTION_CHART.exists():
+            story.append(Spacer(1, 0.1 * inch))
+            story.append(Image(str(RETENTION_CHART), width=img_w, height=img_w * 0.55))
+        story.append(PageBreak())
+
     story += slide_canvas(
         "Live Demo",
         [
@@ -174,28 +196,77 @@ def build_system_report_pdf(output: Path) -> None:
     styles = getSampleStyleSheet()
     h1 = ParagraphStyle("H1", parent=styles["Heading1"], fontSize=16, spaceAfter=10)
     h2 = ParagraphStyle("H2", parent=styles["Heading2"], fontSize=13, spaceAfter=8)
+    h3 = ParagraphStyle("H3", parent=styles["Heading3"], fontSize=11, spaceAfter=6)
     body = ParagraphStyle("Body", parent=styles["BodyText"], fontSize=10, leading=14)
+    code_style = ParagraphStyle("Code", parent=body, fontName="Courier", fontSize=8, leading=10)
 
     story: list = []
+    in_code = False
+    in_mermaid = False
+    code_lines: list[str] = []
+
+    def flush_code() -> None:
+        nonlocal code_lines, in_code, in_mermaid
+        if code_lines:
+            block = "\n".join(code_lines)
+            block = block.replace("──►", "->").replace("│", "|").replace("▼", "v").replace("┌", "+").replace("┐", "+").replace("└", "+").replace("┘", "+")
+            story.append(Preformatted(block, code_style))
+            story.append(Spacer(1, 0.08 * inch))
+        code_lines = []
+        in_code = False
+        in_mermaid = False
+
     for line in text.splitlines():
         stripped = line.strip()
+
+        if stripped.startswith("```"):
+            if in_code:
+                flush_code()
+            else:
+                lang = stripped[3:].strip()
+                in_code = True
+                in_mermaid = lang == "mermaid"
+            continue
+
+        if in_code:
+            if in_mermaid:
+                continue  # skip mermaid diagrams in PDF
+            code_lines.append(line.rstrip())
+            continue
+
         if not stripped:
-            story.append(Spacer(1, 0.08 * inch))
+            story.append(Spacer(1, 0.06 * inch))
             continue
         if stripped.startswith("# "):
-            story.append(Paragraph(stripped[2:], h1))
+            story.append(Paragraph(_clean_inline(stripped[2:]), h1))
         elif stripped.startswith("## "):
-            story.append(Paragraph(stripped[3:], h2))
+            story.append(Paragraph(_clean_inline(stripped[3:]), h2))
+        elif stripped.startswith("### "):
+            story.append(Paragraph(_clean_inline(stripped[4:]), h3))
         elif stripped.startswith("---"):
             story.append(Spacer(1, 0.1 * inch))
-        elif stripped.startswith("|"):
-            safe = stripped.replace("&", "&amp;")
+        elif stripped.startswith("|") and "---" not in stripped:
+            safe = _clean_inline(stripped)
             story.append(Paragraph(f"<font face='Courier' size='8'>{safe}</font>", body))
         elif stripped.startswith("- "):
-            story.append(Paragraph(f"&bull; {stripped[2:]}", body))
+            story.append(Paragraph(f"&bull; {_clean_inline(stripped[2:])}", body))
+        elif re.match(r"^\d+\.\s", stripped):
+            story.append(Paragraph(_clean_inline(stripped), body))
         else:
-            safe = stripped.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            story.append(Paragraph(safe, body))
+            story.append(Paragraph(_clean_inline(stripped), body))
+
+    flush_code()
+
+    if HEART_CHART.exists():
+        story.append(PageBreak())
+        story.append(Paragraph("Appendix: HEART Metrics Chart", h2))
+        story.append(Spacer(1, 0.1 * inch))
+        story.append(Image(str(HEART_CHART), width=6 * inch, height=3.3 * inch))
+    if RETENTION_CHART.exists():
+        story.append(Spacer(1, 0.15 * inch))
+        story.append(Paragraph("Appendix: Cohort Retention Curve", h2))
+        story.append(Spacer(1, 0.1 * inch))
+        story.append(Image(str(RETENTION_CHART), width=6 * inch, height=3.3 * inch))
 
     doc.build(story)
     print(f"Created {output}")
@@ -203,6 +274,10 @@ def build_system_report_pdf(output: Path) -> None:
 
 def main() -> None:
     SUBMISSION_DIR.mkdir(parents=True, exist_ok=True)
+    charts_script = ROOT / "scripts" / "generate_charts.py"
+    if charts_script.exists():
+        import subprocess
+        subprocess.run([sys.executable, str(charts_script)], check=False)
     build_presentation_pdf(SUBMISSION_DIR / "Task-3-Presentation.pdf")
     build_system_report_pdf(SUBMISSION_DIR / "SYSTEM_REPORT.pdf")
 

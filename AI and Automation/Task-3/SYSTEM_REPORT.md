@@ -22,17 +22,17 @@ This system implements a five-module AI-native CRM for the fictional E-Cell comp
 ### 2.2 Module Boundaries
 
 ```
-data/ ──► crm.py (ingest, CRUD) ──► SQLite
-                    │
-         ┌──────────┼──────────┐
-         ▼          ▼          ▼
+data/ -> crm.py (ingest, CRUD) -> SQLite
+                    |
+         +----------+----------+
+         v          v          v
      memory.py  agents.py  cohort.py
-         │          │          │
-         └──────────┼──────────┘
-                    ▼
-               heart.py ──► dashboard/
-                    │
-                    ▼
+         |          |          |
+         +----------+----------+
+                    v
+               heart.py -> dashboard/
+                    |
+                    v
                api/app.py (/api/v1)
 ```
 

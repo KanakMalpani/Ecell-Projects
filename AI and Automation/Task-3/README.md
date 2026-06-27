@@ -73,6 +73,15 @@ Optional: set `LLM_PROVIDER=gemini` and `GEMINI_API_KEY` for API mode.
 Generate: `python scripts/generate_data.py`  
 Ingest: `python scripts/run_ingest.py`
 
+## Verify & regenerate submission
+
+```bash
+python scripts/verify_all.py
+python scripts/generate_submission_pdfs.py
+```
+
+Start Ollama before evaluation for live LLM responses: `ollama serve` and `ollama pull llama3:8b-instruct`.
+
 ## Run Modules Independently
 
 ```bash
