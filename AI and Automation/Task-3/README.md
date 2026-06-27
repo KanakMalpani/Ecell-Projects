@@ -94,10 +94,12 @@ python -m src.heart
 
 ## Deliverables
 
+- `submission/Task-3-Presentation.pdf` — presentation deck (submit this PDF)
+- `submission/SYSTEM_REPORT.pdf` — system report (submit this PDF)
+- `SUBMISSION.md` — submission checklist and pre-flight steps
 - `SYSTEM_REPORT.md` — architecture, HEART definitions, cohort methodology, agent design  
 - `SECURITY.md` — auth, secrets, and deployment hardening  
-- `reports/` — exported cohort JSON/PDF  
-- `data/synthetic_crm_dataset.json` — generated dataset  
+- `LOCAL_DEMO_GUIDE.md` — evaluation-day demo script
 
 ## Evaluation Demo Checklist
 

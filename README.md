@@ -39,7 +39,7 @@ See [AI and Automation/Task-2/README.md](AI%20and%20Automation/Task-2/README.md)
 
 **Task 3:** AI-integrated CRM platform with LangGraph agents, cohort analysis, and HEART metrics (Ollama local LLM).
 
-See [AI and Automation/Task-3/README.md](AI%20and%20Automation/Task-3/README.md) for setup and run instructions.
+See [AI and Automation/Task-3/README.md](AI%20and%20Automation/Task-3/README.md) for setup. Submit PDFs from `Task-3/submission/`.
 
 ## GitHub
 

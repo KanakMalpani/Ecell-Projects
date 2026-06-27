@@ -1,5 +1,7 @@
 # Local Demo Guide — Task 3 AI CRM
 
+Quick start: run `.\start_demo.ps1` from the Task-3 folder.
+
 ## 1. Setup (one time)
 
 ```powershell
@@ -57,19 +59,11 @@ POST `/api/v1/cohorts/export/json` (analytics or supervisor token)
 
 ## 5. Optional LLM backends
 
-**Ollama (local):**
+**Ollama (local, default):**
 ```
 LLM_PROVIDER=ollama
-OLLAMA_MODEL=llama3:8b
+OLLAMA_MODEL=llama3:8b-instruct
 ```
-
-**Gemini (API):**
-```
-LLM_PROVIDER=gemini
-GEMINI_API_KEY=your_key
-```
-
-Default `mock` works without any external service.
 
 ## 6. Module-only runs
 
