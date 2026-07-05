@@ -391,7 +391,7 @@ class CRMService:
         return stats
 
     def _assign_cohort(self, data: dict[str, Any]) -> str:
-        acq = data.get("acquisition_date", "")[:7]
+        acq = (data.get("acquisition_date") or now_iso()[:10])[:7]
         industry = data.get("industry", "SaaS")
         tier = data.get("product_tier", "Starter")
         return f"{acq}_{industry}_{tier}".replace(" ", "_")

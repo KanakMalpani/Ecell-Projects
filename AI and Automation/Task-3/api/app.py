@@ -73,6 +73,16 @@ class CustomerCreate(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class CustomerUpdate(BaseModel):
+    name: str | None = None
+    company: str | None = None
+    industry: str | None = None
+    product_tier: str | None = None
+    engagement_score: float | None = Field(None, ge=0, le=100)
+    behavioral_tags: list[str] | None = None
+    metadata: dict[str, Any] | None = None
+
+
 class TicketCreate(BaseModel):
     customer_id: str
     title: str
@@ -185,6 +195,31 @@ def get_customer(
     return {"customer": customer, "timeline": timeline}
 
 
+@app.patch("/api/v1/customers/{customer_id}")
+def update_customer(
+    customer_id: str,
+    body: CustomerUpdate,
+    user: dict = Depends(require_permission("customers:write")),
+) -> dict[str, Any]:
+    updates = body.model_dump(exclude_none=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    result = crm_service.update_customer(customer_id, updates)
+    if not result:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return {"customer": result}
+
+
+@app.delete("/api/v1/customers/{customer_id}")
+def delete_customer(
+    customer_id: str,
+    user: dict = Depends(require_permission("customers:write")),
+) -> dict[str, Any]:
+    if not crm_service.delete_customer(customer_id):
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return {"deleted": True, "customer_id": customer_id}
+
+
 @app.post("/api/v1/tickets/create")
 def create_ticket(
     body: TicketCreate,
@@ -265,6 +300,9 @@ def cohort_analysis(
     start = time.perf_counter()
     analysis = cohort_engine.full_analysis(cohort_id)
     primary = analysis["cohorts"][0] if analysis.get("cohorts") else {}
+    # Prefer largest cohort for headline metrics when no filter applied
+    if not cohort_id and analysis.get("cohorts"):
+        primary = max(analysis["cohorts"], key=lambda c: c.get("customer_count", 0))
     latency = (time.perf_counter() - start) * 1000
     audit = _audit(user, 0.95, latency, "GET /cohorts/analysis", {"cohort_id": cohort_id})
     return {
