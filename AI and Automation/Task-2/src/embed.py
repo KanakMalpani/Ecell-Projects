@@ -1,17 +1,42 @@
 """
-Stage 2: Embedding generation and vector indexing.
+=============================================================================
+Stage 2: Embedding Generation & Vector Indexing
+=============================================================================
 
-Turns text chunks into numerical vectors (embeddings) and stores them
-in a local ChromaDB database for fast similarity search.
+PURPOSE
+-------
+Transforms text chunks (from Stage 1) into dense vector embeddings and persists
+them in a local ChromaDB index for fast approximate nearest-neighbor search.
 
-Flow:
+ROLE IN THE RAG PIPELINE
+------------------------
+  Input:  data/processed/chunks.json
+  Output: models/vector_store/  (ChromaDB HNSW index, cosine space)
+          models/state/index_state.json
+
+  At query time (Stage 3 orchestrate.py):
+    user question → same embedding model → query vector → ChromaDB.query()
+    → top_k RetrievedChunk objects with similarity scores
+
+INTERVIEW TALKING POINTS
+------------------------
+1. **Bi-encoder retrieval:** Query and documents encoded independently (fast);
+   cross-encoder reranking happens later in orchestrate.py (slow but precise).
+2. **normalize_embeddings=True:** L2-normalized vectors → cosine similarity =
+   dot product; ChromaDB configured with hnsw:space=cosine.
+3. **PersistentClient:** Index on disk survives restarts — no Redis/Pinecone
+   needed for this enterprise POC; trade-off is single-node scale.
+4. **Batch encoding:** batch_size=32 amortizes GPU/CPU overhead across chunks.
+5. **Metadata stored with vectors:** source_file, doc_type, section_hint enable
+   citation in API responses without re-reading original PDFs.
+6. **reset vs append:** Default wipe-and-rebuild ensures reproducible demos;
+   --no-reset supports incremental indexing in production extensions.
+
+FLOW:
   1. Load chunks.json from Stage 1
   2. Encode each chunk with sentence-transformers (all-MiniLM-L6-v2)
   3. Store vectors + metadata in ChromaDB (models/vector_store/)
   4. Save index_state.json with stats
-
-At query time, the user's question is also embedded and ChromaDB
-finds the most similar chunks by cosine distance.
 """
 
 from __future__ import annotations
@@ -29,31 +54,46 @@ from src.utils import load_config, load_json, resolve_path, save_json, setup_log
 logger = setup_logging("embed")
 
 
+# -----------------------------------------------------------------------------
+# Data model — one retrieved chunk with similarity metadata
+# -----------------------------------------------------------------------------
 @dataclass
 class RetrievedChunk:
     """
-    One chunk returned by a vector search, with similarity score.
+    One chunk returned by vector search, enriched with similarity score.
 
-    Used by orchestrate.py when building LLM context.
+    Consumed by orchestrate.py when building LLM context and API source citations.
+
+    distance:   ChromaDB cosine distance (0 = identical, 2 = opposite direction)
+    similarity: 1 - distance, clamped to >= 0.0 (higher = better match)
     """
     chunk_id: str
     text: str
     source_file: str
     doc_type: str
     section_hint: str
-    distance: float      # cosine distance (0 = identical, 2 = opposite)
-    similarity: float    # 1 - distance, clamped to 0.0 minimum
+    distance: float
+    similarity: float
 
 
+# -----------------------------------------------------------------------------
+# VectorIndex — ChromaDB wrapper for enterprise document collection
+# -----------------------------------------------------------------------------
 class VectorIndex:
     """
-    ChromaDB-backed local vector store.
+    ChromaDB-backed local vector store for enterprise document chunks.
 
-    ChromaDB persists to disk so the index survives server restarts.
-    Uses cosine distance — lower distance = more similar text.
+    Design decisions:
+      - PersistentClient: index survives server restarts (disk at vector_store_dir)
+      - Collection name "enterprise_docs": single corpus per deployment
+      - Cosine space: standard for normalized sentence embeddings
+
+    Interview note: ChromaDB uses HNSW approximate search — O(log n) query time
+    with small recall trade-off vs. brute-force; acceptable for <100k chunks.
     """
 
     def __init__(self, persist_dir: str, collection_name: str = "enterprise_docs"):
+        """Open or create the persistent ChromaDB collection."""
         self.persist_dir = resolve_path(persist_dir)
         self.client = chromadb.PersistentClient(
             path=str(self.persist_dir),
@@ -65,7 +105,12 @@ class VectorIndex:
         )
 
     def reset(self) -> None:
-        """Delete and recreate the collection (used when rebuilding the index)."""
+        """
+        Delete and recreate the collection.
+
+        Used when rebuilding the full index (default build_index behavior).
+        Interview: full rebuild avoids stale chunk IDs from removed documents.
+        """
         name = self.collection.name
         self.client.delete_collection(name)
         self.collection = self.client.get_or_create_collection(
@@ -78,7 +123,12 @@ class VectorIndex:
         chunks: list[dict[str, Any]],
         embeddings: list[list[float]],
     ) -> None:
-        """Insert chunk texts, embeddings, and metadata into the index."""
+        """
+        Batch-insert chunk texts, precomputed embeddings, and metadata.
+
+        ChromaDB stores three parallel arrays: ids, embeddings, documents, metadatas.
+        chunk_id from ingest.py becomes the stable primary key.
+        """
         self.collection.add(
             ids=[c["chunk_id"] for c in chunks],
             embeddings=embeddings,
@@ -96,9 +146,10 @@ class VectorIndex:
 
     def query(self, query_embedding: list[float], top_k: int) -> list[RetrievedChunk]:
         """
-        Find the top_k most similar chunks to a query embedding.
+        Approximate nearest-neighbor search for the query embedding.
 
-        Returns chunks sorted by similarity (highest first).
+        Returns up to top_k chunks; orchestrate.py may rerank/filter further.
+        Results are NOT re-sorted here — ChromaDB returns by distance ascending.
         """
         results = self.collection.query(
             query_embeddings=[query_embedding],
@@ -129,23 +180,31 @@ class VectorIndex:
         return retrieved
 
     def count(self) -> int:
-        """Return total number of vectors stored in the index."""
+        """Return total vectors in the collection — used for index_state.json."""
         return self.collection.count()
 
 
+# -----------------------------------------------------------------------------
+# build_index — full Stage 2 pipeline (load → encode → persist → state)
+# -----------------------------------------------------------------------------
 def build_index(
     processed_dir: str | None = None,
     vector_store_dir: str | None = None,
     reset: bool = True,
 ) -> dict[str, Any]:
     """
-    Full indexing pipeline: load chunks → embed → store in ChromaDB.
+    Full indexing pipeline: load chunks → embed → store in ChromaDB → save state.
 
     Args:
-        reset: if True, wipe existing index before adding new vectors
+        processed_dir: override path to chunks.json directory
+        vector_store_dir: override ChromaDB persist path
+        reset: if True, wipe existing index before inserting (default: full rebuild)
 
     Returns:
-        state dict saved to models/state/index_state.json
+        state dict persisted to models/state/index_state.json
+
+    Raises:
+        FileNotFoundError: if chunks.json missing (Stage 1 not run)
     """
     config = load_config()
     processed = resolve_path(processed_dir or config["paths"]["processed_dir"])
@@ -189,8 +248,11 @@ def build_index(
     return state
 
 
+# -----------------------------------------------------------------------------
+# CLI entry point
+# -----------------------------------------------------------------------------
 def main() -> None:
-    """CLI entry point: python scripts/run_embed.py"""
+    """CLI entry point: python scripts/run_embed.py [--no-reset]"""
     parser = argparse.ArgumentParser(description="Stage 2: embed and index chunks")
     parser.add_argument("--no-reset", action="store_true", help="Append without resetting index")
     args = parser.parse_args()

@@ -1,9 +1,19 @@
 /**
- * Login page — sign in with email and password.
+ * Login Page — /login
  *
- * Calls AuthContext.login() which POSTs to /api/auth.
- * Supports ?redirect= query param to return user after login (e.g. from checkout).
+ * ROLE IN THE APP:
+ *   Customer authentication form. Calls AuthContext.login() → PUT /api/auth.
+ *   Supports ?redirect= query param (e.g. /login?redirect=/checkout).
+ *
+ * KEY PATTERNS:
+ *   - Suspense wrapper required because LoginForm uses useSearchParams()
+ *   - Client-side error display from thrown login() errors
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Redirect-after-login preserves user's intended destination
+ *   - Form validation is both client (required) and server (Zod in API)
  */
+
 "use client";
 
 import { Suspense, useState } from "react";
@@ -11,6 +21,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
+/** LoginForm — email/password form with redirect support. */
 function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
@@ -85,6 +96,7 @@ function LoginForm() {
   );
 }
 
+/** LoginPage — Suspense boundary for useSearchParams in LoginForm. */
 export default function LoginPage() {
   return (
     <Suspense fallback={<div className="p-20 text-center">Loading...</div>}>

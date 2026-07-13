@@ -1,11 +1,18 @@
 /**
- * Navbar — sticky top navigation for the storefront.
+ * Navbar — sticky top navigation for storefront and admin awareness.
  *
- * Shows store links (Home, Shop, Orders), cart badge with item count,
- * login/logout, and an Admin link for users with role === "ADMIN".
+ * ROLE IN THE APP:
+ *   Primary navigation chrome. Shows cart badge (from CartContext), auth state
+ *   (from AuthContext), and conditionally hides store links on /admin routes.
  *
- * On mobile, a hamburger menu toggles a dropdown (useState + md:hidden).
- * usePathname() highlights the active link and hides store nav on /admin routes.
+ * KEY PATTERNS:
+ *   - usePathname() for active link highlighting and admin route detection
+ *   - Responsive: hamburger menu on mobile (md:hidden / md:flex)
+ *   - Role-based UI: Admin link only visible when user.role === "ADMIN"
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Client Component because it needs hooks, onClick logout, cart count
+ *   - Sticky header + backdrop-blur is a modern CSS pattern for readability
  */
 "use client";
 
@@ -16,6 +23,7 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 
+/** Navbar component — renders logo, nav links, cart badge, and auth controls. */
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { totalItems } = useCart();

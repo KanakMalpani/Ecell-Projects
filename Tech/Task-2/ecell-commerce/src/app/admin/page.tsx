@@ -1,9 +1,15 @@
 /**
- * Admin dashboard — overview stats for store managers.
+ * Admin Dashboard — /admin
  *
- * Fetches /api/analytics and displays revenue, order count, user count,
- * top-selling products, and low-stock alerts in stat cards and tables.
+ * ROLE IN THE APP:
+ *   Analytics overview for store managers. Fetches GET /api/analytics
+ *   and displays KPI cards, top products, order status breakdown, low stock.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Stat cards pattern: icon + value + label in a responsive grid
+ *   - Data fetched client-side; could be Server Component for faster load
  */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,6 +17,7 @@ import { DollarSign, ShoppingBag, Users, TrendingUp, AlertTriangle } from "lucid
 import { formatCurrency } from "@/lib/utils";
 import type { Analytics } from "@/types";
 
+/** AdminDashboard — analytics KPI cards and breakdown tables. */
 export default function AdminDashboard() {
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,10 +1,50 @@
 """
-FastAPI backend — Module 5 API architecture.
+FastAPI backend — Module 5: REST API architecture for the E-Cell CRM.
 
-Start:
-    uvicorn api.app:app --host 127.0.0.1 --port 8002 --reload
+WHAT THIS FILE DOES
+-------------------
+Thin HTTP layer that exposes all 5 modules as REST endpoints with:
+  - JWT authentication (Bearer token)
+  - Role-based access control (Agent/Supervisor/Admin/Analytics)
+  - Pydantic request validation
+  - Audit metadata on every response (timestamp, agent_id, latency_ms, confidence)
+  - Auto-ingest on startup if database is empty
 
-Swagger: http://127.0.0.1:8002/docs
+START SERVER
+------------
+  uvicorn api.app:app --host 127.0.0.1 --port 8002 --reload
+  Swagger docs: http://127.0.0.1:8002/docs
+  Dashboard:    http://127.0.0.1:8002/dashboard
+
+CORE ENDPOINTS (required by task spec)
+--------------------------------------
+  POST /api/v1/customers              — create customer with cohort assignment
+  POST /api/v1/tickets/create         — create ticket, auto-route to agent
+  POST /api/v1/tickets/{id}/summarize — LLM ticket summarization
+  POST /api/v1/query/agent            — LangGraph multi-turn agent query
+  GET  /api/v1/cohorts/analysis       — retention curves + churn scores
+  GET  /api/v1/heart                  — all 5 HEART dimensions (live)
+
+DESIGN PATTERNS
+---------------
+  Depends(require_permission(...)) — FastAPI dependency injection for auth
+  _audit()                         — logs every request to audit_log table
+  startup_ingest()                 — auto-loads synthetic data if DB empty
+  CORS middleware                  — restricted to ALLOWED_ORIGINS from .env
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: Why FastAPI over Flask?
+  A: Auto-generates OpenAPI/Swagger docs, native Pydantic validation,
+     async-ready, type hints throughout.
+
+  Q: What is in the audit block?
+  A: timestamp, agent_id (who made request), source_confidence (AI confidence),
+     latency_ms (response time), role — supports compliance and debugging.
+
+  Q: How does the dashboard get data?
+  A: dashboard/index.html fetches /api/v1/heart and /api/v1/cohorts/analysis
+     with JWT token stored in sessionStorage after login.
 """
 
 from __future__ import annotations

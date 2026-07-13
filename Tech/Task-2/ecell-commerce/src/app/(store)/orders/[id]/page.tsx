@@ -1,10 +1,16 @@
 /**
- * Order detail page — single order view with tracking timeline.
+ * Order Detail Page — /orders/[id]
  *
- * Fetches order by ID from /api/orders/[id].
- * Shows line items, shipping address, payment status, and a visual
- * progress bar through CONFIRMED → PROCESSING → SHIPPED → DELIVERED.
+ * ROLE IN THE APP:
+ *   Single order view with visual tracking timeline, line items, and totals.
+ *   Fetches from GET /api/orders/[id] (owner or admin only).
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - trackingSteps array drives the progress indicator UI
+ *   - Cancelled orders hide the tracking timeline
+ *   - Shows coupon discount and payment status in summary
  */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -15,8 +21,10 @@ import { ArrowLeft, Truck, CheckCircle2, Circle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { Order } from "@/types";
 
+/** Fulfillment pipeline steps for the tracking progress bar. */
 const trackingSteps = ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"];
 
+/** OrderDetailPage — order tracking, items, shipping, and payment summary. */
 export default function OrderDetailPage() {
   const params = useParams();
   const id = params.id as string;

@@ -1,8 +1,13 @@
 /**
- * Footer — site-wide footer with branding, shop links, and support links.
+ * Footer — site-wide footer with branding and navigation links.
  *
- * This is a Server Component (no "use client") because it only renders
- * static links and text — no interactivity needed.
+ * ROLE IN THE APP:
+ *   Static footer rendered by the (store) layout on all customer-facing pages.
+ *   No interactivity → Server Component (no "use client" directive).
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Server Components reduce JS bundle sent to browser
+ *   - Footer is in (store) layout, NOT admin layout (admin has its own sidebar)
  */
 import Link from "next/link";
 

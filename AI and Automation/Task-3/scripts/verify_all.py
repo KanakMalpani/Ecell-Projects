@@ -1,5 +1,23 @@
 #!/usr/bin/env python
-"""End-to-end verification for Task 3 CRM platform."""
+"""
+End-to-end verification script for Task 3 CRM platform.
+
+WHAT THIS FILE DOES
+-------------------
+Runs 7 check categories before submission/demo:
+  1. Deliverables — required files exist (README, PDFs, source files)
+  2. Dataset     — crm.db has ≥500 customers, ≥1000 tickets, ≥2000 interactions
+  3. Module logic — HEART dimensions, cohort analysis, agent query, summarization
+  4. PDF content  — submission PDFs have sufficient word density
+  5. Charts       — heart_metrics.png and retention_curve.png exist
+  6. API (optional) — health, auth, endpoints if server is running
+  7. Security     — path traversal blocked, passwords hashed, anonymous denied
+
+RUN
+---
+  python scripts/verify_all.py
+  Exit code 1 if any check fails — use before evaluation day.
+"""
 
 from __future__ import annotations
 

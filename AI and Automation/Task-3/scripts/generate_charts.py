@@ -2,8 +2,21 @@
 """
 Generate HEART and cohort charts for reports and submission deck.
 
-Run after ingest: python scripts/generate_charts.py
-Outputs: reports/heart_metrics.png, reports/retention_curve.png
+WHAT THIS FILE DOES
+-------------------
+Creates two PNG charts in reports/ from live CRM data:
+  1. heart_metrics.png    — bar chart of all 5 HEART dimensions (0-100 scale)
+  2. retention_curve.png  — line chart of largest cohort's 6-month retention
+
+USED BY
+-------
+  scripts/generate_submission_pdfs.py embeds these charts in submission PDFs.
+  Also useful for manual inspection before evaluation.
+
+RUN
+---
+  python scripts/generate_charts.py
+  (auto-run by generate_submission_pdfs.py)
 """
 
 from __future__ import annotations

@@ -1,4 +1,30 @@
 <!DOCTYPE html>
+<!--
+  E-Cell CRM — HEART & Cohort Dashboard (live metrics UI)
+
+  WHAT THIS FILE DOES
+  -------------------
+  Single-page dashboard that authenticates via JWT and fetches live metrics
+  from the FastAPI backend, rendering HEART dimension cards and Chart.js charts.
+
+  DATA FLOW
+  ---------
+  1. User logs in → POST /api/v1/auth/login → JWT stored in sessionStorage
+  2. loadDashboard() parallel-fetches:
+     - GET /api/v1/heart          → 5 HEART dimension scores
+     - GET /api/v1/cohorts/analysis → retention curve + churn rate
+  3. JavaScript renders metric cards + Chart.js bar/line charts
+
+  PI INTERVIEW TALKING POINTS
+  ---------------------------
+  Q: Why sessionStorage for the token?
+  A: Persists across page refreshes within the tab; cleared when tab closes.
+     Production would use httpOnly cookies for XSS protection.
+
+  Q: Why Chart.js CDN instead of bundling?
+  A: Demo simplicity — no build step for the dashboard; served as static HTML
+     by FastAPI at GET /dashboard.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />

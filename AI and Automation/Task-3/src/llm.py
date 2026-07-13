@@ -1,4 +1,40 @@
-"""LLM provider abstraction — Ollama, Gemini, or deterministic mock."""
+"""
+LLM provider abstraction — unified interface for all AI inference.
+
+WHAT THIS FILE DOES
+-------------------
+Single entry point (LLMClient.invoke) that routes prompts to one of three
+backends without the rest of the codebase caring which is active.
+
+THREE BACKENDS (priority order)
+-------------------------------
+  1. Ollama  — local Llama-3-8B via HTTP POST to /api/generate (Option A from task spec)
+  2. Gemini  — Google Gemini 1.5 Flash via langchain-google-genai (Option B)
+  3. Mock    — rule-based deterministic text when both above are unreachable
+
+WHY A MOCK FALLBACK?
+--------------------
+Evaluation environments may not have Ollama installed. Mock ensures the demo
+pipeline never crashes — agents still return structured responses.
+
+RETURN SHAPE (every invoke call)
+--------------------------------
+  { text, confidence, provider, latency_ms }
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: Why Ollama as default?
+  A: Data privacy (customer data never leaves machine), zero API cost,
+     meets task spec Option A for on-prem inference.
+
+  Q: How does fallback work?
+  A: try/except around HTTP call; on failure logs warning and calls _mock()
+     which returns keyword-matched template responses.
+
+  Q: Why temperature=0.2?
+  A: Low temperature = more deterministic, factual outputs — important for
+     enterprise CRM where hallucination is costly.
+"""
 
 from __future__ import annotations
 

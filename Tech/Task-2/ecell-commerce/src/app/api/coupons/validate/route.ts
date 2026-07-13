@@ -1,11 +1,20 @@
 /**
- * Coupon validation API — check if a code is valid at checkout.
+ * Coupon Validation API — POST /api/coupons/validate
  *
- * POST /api/coupons/validate  — { code, subtotal } → discount amount or error
+ * ROLE IN THE APP:
+ *   Pre-checkout coupon check. Returns discount amount if valid, or error reason.
+ *   Called by checkout page before placing order (UX preview of savings).
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Validates: exists, active, not expired, minOrder met, usage limit not reached
+ *   - PERCENTAGE: (subtotal * value) / 100; FIXED: min(value, subtotal)
+ *   - Final coupon increment happens in POST /api/orders (not here)
  */
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+/** POST — Validate a coupon code against the current cart subtotal. */
 export async function POST(request: NextRequest) {
   const { code, subtotal } = await request.json();
 

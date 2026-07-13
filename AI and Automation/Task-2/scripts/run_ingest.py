@@ -1,11 +1,42 @@
 #!/usr/bin/env python
 """
-Run Stage 1 only: document ingestion and chunking.
+=============================================================================
+Stage 1 CLI Wrapper — Document Ingestion & Chunking
+=============================================================================
 
-Equivalent to the first step of run_pipeline.py.
-Reads PDFs/txt from data/raw/, saves chunks to data/processed/chunks.json.
+PURPOSE
+-------
+Thin entry-point script that invokes src/ingest.py's main() so Stage 1 can be
+run in isolation — equivalent to the first step of run_pipeline.py.
 
-Usage: python scripts/run_ingest.py
+ROLE IN THE RAG PIPELINE
+------------------------
+  Stage 1 of 5: Document Ingestion & Text Segmentation
+
+  Input:  data/raw/*.pdf, *.txt, *.md  (enterprise SOPs, policies, compliance)
+  Output: data/processed/chunks.json    (list of searchable text chunks)
+
+  Each chunk carries metadata (source_file, doc_type, section_hint, token_count)
+  that flows through embedding (Stage 2) and appears in API source citations.
+
+INTERVIEW TALKING POINTS
+------------------------
+1. **Chunking strategy:** Section-aware split (headings) THEN token-based
+   chunking with overlap — preserves semantic boundaries better than blind splits.
+2. **tiktoken cl100k_base:** Same tokenizer family as GPT models — chunk_size
+   in settings.yaml maps to real LLM context units.
+3. **pdfplumber for PDFs:** Layout-aware text extraction vs. naive byte read;
+   handles multi-page enterprise PDFs common in SOP libraries.
+4. **doc_type metadata:** Heuristic classification (SOP, policy, compliance)
+   enables filtered retrieval or UI badges in future extensions.
+5. **Idempotent re-run:** Re-ingesting overwrites chunks.json — safe to add
+   new files to raw_dir and re-run without manual cleanup.
+
+USAGE:
+    python scripts/run_ingest.py
+
+NEXT STEP:
+    python scripts/run_embed.py   # Stage 2 — embed chunks into ChromaDB
 """
 
 import sys

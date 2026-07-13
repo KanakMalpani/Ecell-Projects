@@ -1,4 +1,20 @@
 # Prompt templates for CRM AI agents
+#
+# WHAT THIS FILE DOES
+# -------------------
+# Reference configuration for LLM system prompts used by the AI layer.
+# The active prompts are also defined inline in src/agents.py (SUMMARIZE_SYSTEM,
+# AGENT_SYSTEM) — this YAML serves as a human-readable prompt registry.
+#
+# PI INTERVIEW TALKING POINTS
+# ---------------------------
+# Q: Why separate prompt config from code?
+# A: Allows non-engineers to tune prompts without touching Python.
+#    Production would load these via yaml.safe_load() at startup.
+#
+# Q: What makes a good CRM summarization prompt?
+# A: Grounding instruction ("cite only facts present"), urgency classification,
+#    and explicit resolution path — reduces hallucination risk.
 
 summarize_system: |
   You are an enterprise CRM assistant. Summarize support tickets with:

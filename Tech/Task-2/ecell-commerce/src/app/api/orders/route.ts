@@ -1,14 +1,24 @@
 /**
- * Orders API — list and create orders.
+ * Orders API — /api/orders
  *
- * GET  /api/orders  — user's orders (or all orders if admin)
- * POST /api/orders  — checkout: create order, apply coupon, decrement stock
+ * ROLE IN THE APP:
+ *   Core checkout endpoint. GET lists orders (scoped by role).
+ *   POST creates an order with stock decrement, coupon application, and
+ *   simulated payment — all wrapped in a Prisma $transaction.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - $transaction ensures atomicity: stock decrement + order create together
+ *   - Server re-validates stock and prices (never trust client cart data)
+ *   - Admin sees all orders; users see only their own (row-level filtering)
+ *   - Coupon applied server-side again at checkout (double validation)
  */
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, requireAdmin } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
 
+/** GET — List orders (user's own, or all if admin). */
 export async function GET() {
   const session = await getSession();
   if (!session) {
@@ -28,6 +38,7 @@ export async function GET() {
   return NextResponse.json(orders);
 }
 
+/** POST — Checkout: create order, apply coupon, decrement stock atomically. */
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();

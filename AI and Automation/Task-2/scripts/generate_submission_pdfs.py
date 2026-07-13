@@ -1,14 +1,44 @@
 #!/usr/bin/env python
 """
-Generate submission PDFs: presentation deck and system report.
+=============================================================================
+Submission PDF Generator — Presentation Deck & System Report
+=============================================================================
 
-Reads evaluation metrics from reports/metrics_comparison.csv and the
-markdown system report, then builds two PDFs in submission/:
-  - Task-2-Presentation.pdf  (slide deck overview)
-  - SYSTEM_REPORT.pdf        (full architecture report)
+PURPOSE
+-------
+Produces deliverable PDF artifacts for project submission and PI interviews:
+  - Task-2-Presentation.pdf  — slide-deck overview of architecture & results
+  - SYSTEM_REPORT.pdf        — rendered copy of SYSTEM_REPORT.md
 
-Run AFTER evaluation: python scripts/run_evaluate.py && python scripts/generate_submission_pdfs.py
-Requires: pip install reportlab
+ROLE IN THE RAG PIPELINE
+------------------------
+  Post-pipeline utility (runs AFTER Stage 4 evaluation). Reads evaluation
+  outputs from reports/ and packages them for human consumption — does not
+  affect RAG inference or indexing.
+
+  Dependency chain:
+    run_evaluate.py → metrics_comparison.csv
+    SYSTEM_REPORT.md (authored separately)
+    generate_submission_pdfs.py → submission/*.pdf
+
+INTERVIEW TALKING POINTS
+------------------------
+1. **Evaluation → visualization loop:** metrics_comparison.csv is the single
+   source of truth for the results table in the presentation slide.
+2. **ReportLab Platypus:** Uses flowables (Paragraph, Table, Spacer) for
+   professional PDF layout vs. low-level canvas in create_sample_pdf.py.
+3. **Three pipeline comparison slide:** Demonstrates you benchmarked local_llm,
+   reranked_local, and extractive — not just one happy path.
+4. **Anti-hallucination slide:** Explicitly calls out guardrails — shows
+   production-minded design beyond "chatbot over PDFs."
+5. **Markdown → PDF:** Simple line-prefix parser for SYSTEM_REPORT.md; trade-off
+   is no full CommonMark support but zero extra dependencies.
+
+USAGE:
+    python scripts/run_evaluate.py && python scripts/generate_submission_pdfs.py
+
+REQUIRES:
+    pip install reportlab
 """
 
 from __future__ import annotations
@@ -38,7 +68,16 @@ METRICS_CSV = ROOT / "reports" / "metrics_comparison.csv"
 SYSTEM_REPORT_MD = ROOT / "SYSTEM_REPORT.md"
 
 
+# ---------------------------------------------------------------------------
+# Data loading — read evaluation CSV produced by Stage 4
+# ---------------------------------------------------------------------------
 def load_metrics() -> list[dict[str, str]]:
+    """
+    Load pipeline comparison rows from reports/metrics_comparison.csv.
+
+    Returns empty list if evaluation hasn't been run yet (graceful degradation
+    in presentation — slides still generate, just without results table).
+    """
     if not METRICS_CSV.exists():
         return []
     with METRICS_CSV.open(encoding="utf-8") as handle:
@@ -47,7 +86,16 @@ def load_metrics() -> list[dict[str, str]]:
     return [{k: ("" if v is None else str(v)) for k, v in row.items()} for row in rows]
 
 
+# ---------------------------------------------------------------------------
+# Slide builder — reusable canvas for bullet-point slides
+# ---------------------------------------------------------------------------
 def slide_canvas(title: str, bullets: list[str], subtitle: str = "") -> list:
+    """
+    Build a single presentation slide as a list of ReportLab flowables.
+
+    Interview note: landscape letter + large title font mimics standard
+    conference slide proportions for submission review.
+    """
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
         "SlideTitle",
@@ -73,7 +121,16 @@ def slide_canvas(title: str, bullets: list[str], subtitle: str = "") -> list:
     return story
 
 
+# ---------------------------------------------------------------------------
+# Presentation PDF — multi-slide deck with optional metrics table
+# ---------------------------------------------------------------------------
 def build_presentation_pdf(output: Path, metrics: list[dict[str, str]]) -> None:
+    """
+    Assemble the full Task-2 presentation deck.
+
+    Slides cover: problem statement, five-stage pipeline, three pipeline paths,
+    evaluation results (if available), anti-hallucination, live demo, deliverables.
+    """
     doc = SimpleDocTemplate(
         str(output),
         pagesize=landscape(letter),
@@ -123,6 +180,7 @@ def build_presentation_pdf(output: Path, metrics: list[dict[str, str]]) -> None:
         ],
     )
 
+    # Evaluation results table — only if metrics CSV exists from Stage 4
     if metrics:
         styles = getSampleStyleSheet()
         story.append(Paragraph("Evaluation Results", styles["Heading1"]))
@@ -186,7 +244,17 @@ def build_presentation_pdf(output: Path, metrics: list[dict[str, str]]) -> None:
     print(f"Created {output}")
 
 
+# ---------------------------------------------------------------------------
+# System report PDF — lightweight Markdown → PDF renderer
+# ---------------------------------------------------------------------------
 def build_system_report_pdf(output: Path) -> None:
+    """
+    Convert SYSTEM_REPORT.md to a formatted PDF.
+
+    Uses prefix-based line classification (# heading, ## subheading, | table,
+    - bullet). Not a full Markdown parser — sufficient for the project's
+    authored report structure.
+    """
     text = SYSTEM_REPORT_MD.read_text(encoding="utf-8")
     doc = SimpleDocTemplate(
         str(output),
@@ -228,7 +296,11 @@ def build_system_report_pdf(output: Path) -> None:
     print(f"Created {output}")
 
 
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
 def main() -> None:
+    """Generate both submission PDFs into submission/ directory."""
     SUBMISSION_DIR.mkdir(parents=True, exist_ok=True)
     metrics = load_metrics()
     build_presentation_pdf(SUBMISSION_DIR / "Task-2-Presentation.pdf", metrics)

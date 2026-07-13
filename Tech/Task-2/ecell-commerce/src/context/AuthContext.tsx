@@ -1,14 +1,20 @@
 /**
- * AuthContext — global authentication state for the entire app.
+ * AuthContext — global authentication state (React Context).
  *
- * React Context lets any component read "who is logged in" without
- * passing props through every layer. Wrap the app in <AuthProvider>
- * (see Providers.tsx), then call useAuth() in any client component.
+ * ROLE IN THE APP:
+ *   Client-side session mirror. On mount, calls GET /api/auth/me to restore
+ *   the user from the httpOnly JWT cookie. Exposes login/register/logout
+ *   methods that hit /api/auth and update local React state.
  *
- * On mount, it calls GET /api/auth/me to restore the session from the cookie.
- * login / register / logout talk to /api/auth and update local state.
+ * KEY PATTERN:
+ *   "use client" required — uses hooks (useState, useEffect) and fetch.
+ *   Wrapped by Providers.tsx at the root layout level.
  *
- * "use client" is required because this uses React hooks and fetch.
+ * PI INTERVIEW TALKING POINTS:
+ *   - Why Context over Redux? Simple global state; no boilerplate for 1 user object
+ *   - Cookie is httpOnly → client can't read JWT; must ask server via /api/auth/me
+ *   - loading flag prevents flash of login UI before session check completes
+ *   - PUT for login (non-standard) chosen to separate from POST register on same route
  */
 "use client";
 
@@ -32,6 +38,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+/** AuthProvider — wraps children with auth state and action methods. */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);

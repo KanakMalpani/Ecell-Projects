@@ -1,13 +1,18 @@
 /**
- * Root Layout — the outermost layout wrapping every page in the app.
+ * Root Layout — outermost HTML shell for the entire Next.js app.
  *
- * In Next.js App Router, layout.tsx files persist across navigation
- * (they don't re-render on route changes). This file sets:
- *   - HTML shell and fonts (Geist)
- *   - Global CSS (Tailwind)
- *   - Context providers (Auth + Cart)
+ * ROLE IN THE APP:
+ *   Wraps ALL routes (storefront + admin). Persists across client-side navigation
+ *   without re-rendering. Sets fonts, global CSS, and Context providers.
  *
- * This is a Server Component — client interactivity lives in Providers.
+ * KEY PATTERNS:
+ *   - Server Component: no "use client" — only static shell + Providers import
+ *   - metadata export → Next.js generates <title> and <meta> tags for SEO
+ *   - Geist fonts loaded via next/font (self-hosted, no layout shift)
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - App Router layouts nest: root → (store) or admin → page
+ *   - flex flex-col on body + flex-1 on main = sticky footer pattern
  */
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";

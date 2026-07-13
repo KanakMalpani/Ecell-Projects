@@ -1,9 +1,15 @@
 /**
- * Register page — create a new customer account.
+ * Register Page — /register
  *
- * Calls AuthContext.register() which POSTs to /api/auth with action "register".
- * On success, redirects to the home page with the user logged in.
+ * ROLE IN THE APP:
+ *   New account creation. Calls AuthContext.register() → POST /api/auth.
+ *   On success, redirects to /shop with user auto-logged-in (JWT cookie set).
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - minLength={6} on password is client-side; server enforces via Zod too
+ *   - Registration immediately logs in — no separate login step needed
  */
+
 "use client";
 
 import { useState } from "react";
@@ -11,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
+/** RegisterPage — name/email/password signup form. */
 export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();

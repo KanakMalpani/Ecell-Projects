@@ -2,11 +2,22 @@
 """
 Generate submission PDFs for Task 3: presentation deck and system report.
 
-Outputs in submission/:
-  - Task-3-Presentation.pdf
-  - SYSTEM_REPORT.pdf
+WHAT THIS FILE DOES
+-------------------
+Builds two submission artifacts in submission/:
+  1. Task-3-Presentation.pdf  — slide deck with live metrics + charts
+  2. SYSTEM_REPORT.pdf        — converts SYSTEM_REPORT.md to PDF with appendix
 
-Run: python scripts/generate_submission_pdfs.py
+PIPELINE
+--------
+  1. Run generate_charts.py for fresh PNG charts
+  2. Load live metrics from heart_service + cohort_engine
+  3. Build presentation slides (ReportLab SimpleDocTemplate, landscape)
+  4. Parse SYSTEM_REPORT.md → PDF with tables, code blocks, chart appendix
+
+RUN BEFORE SUBMISSION
+---------------------
+  python scripts/generate_submission_pdfs.py
 """
 
 from __future__ import annotations

@@ -1,14 +1,24 @@
 /**
- * Products API — list and create products.
+ * Products API — /api/products
  *
- * GET  /api/products  — public catalog with filters (category, search, price, sort)
- * POST /api/products  — admin only: create a new product
+ * ROLE IN THE APP:
+ *   Public product catalog with server-side filtering/sorting.
+ *   Admin product creation endpoint (POST, requireAdmin).
+ *
+ * QUERY PARAMS (GET): category, search, featured, minPrice, maxPrice, sort
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Dynamic Prisma `where` object built from query params
+ *   - Server-side filtering prevents downloading entire catalog to client
+ *   - POST uses slugify() for URL-safe slugs from product names
  */
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 
+/** GET — List products with optional filters and sorting. */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
@@ -57,6 +67,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(products);
 }
 
+/** POST — Admin only: create a new product in the catalog. */
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin();

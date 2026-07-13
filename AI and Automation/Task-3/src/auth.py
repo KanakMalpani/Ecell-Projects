@@ -1,4 +1,45 @@
-"""Role-based access control for CRM API."""
+"""
+Role-based access control (RBAC) for the CRM API.
+
+WHAT THIS FILE DOES
+-------------------
+Handles user authentication (login), JWT token creation/validation, and
+permission checking for every protected API endpoint.
+
+AUTH FLOW
+---------
+  1. POST /api/v1/auth/login with username + password
+  2. verify_password() checks PBKDF2-SHA256 hash (120,000 iterations)
+  3. create_access_token() signs JWT with role + agent_id (12-hour expiry)
+  4. Protected endpoints use Depends(require_permission("...")) to check JWT + role
+
+FOUR ROLES (ROLE_PERMISSIONS)
+-----------------------------
+  Agent      — CRUD customers/tickets, summarize, agent query
+  Supervisor — Agent permissions + cohort read + HEART read
+  Admin      — Full access (*)
+  Analytics  — Read-only: customers, tickets, cohorts, HEART
+
+PASSWORD SECURITY
+-----------------
+  Passwords hashed with PBKDF2-SHA256 at 120,000 iterations.
+  Only hashes stored in memory (USERS dict); plaintext never persisted.
+  Demo users configured via CRM_DEMO_USERS env var.
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: Why JWT instead of session cookies?
+  A: Stateless — API can scale without shared session store. Token carries
+     role and agent_id so every request is self-contained.
+
+  Q: How does require_permission work?
+  A: FastAPI Depends() chain: get_current_user decodes JWT → checker verifies
+     role has the required permission string → 403 if missing.
+
+  Q: Is this production-ready auth?
+  A: Architecture is sound; production needs OAuth2/SSO, token refresh,
+     and secrets in a vault (not .env file).
+"""
 
 from __future__ import annotations
 

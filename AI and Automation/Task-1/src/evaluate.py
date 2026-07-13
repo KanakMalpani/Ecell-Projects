@@ -1,13 +1,37 @@
 """
 Stage 4: evaluate models and produce comparison reports.
 
-Splits data 80/20, trains all three models on the training portion,
-tests each on the held-out 20%, then:
+WHAT THIS FILE DOES
+-------------------
+Splits the feature matrix into train/test sets, trains all three boosting
+models, scores each on held-out data, generates visual reports, and persists
+the winning model for deployment.
 
-  - Computes accuracy, precision, recall, F1 for each model
-  - Draws confusion matrix PNG images
-  - Saves evaluation_report.json and metrics_comparison.csv
-  - Picks the best model (highest macro F1) and saves it as best_model.joblib
+WHY IT EXISTS
+-------------
+Model comparison is not optional — we need objective metrics to justify
+choosing XGBoost over AdaBoost/CatBoost. This module is the "experiment
+tracker" that produces numbers for reports, slides, and interview answers.
+
+HOW IT FITS IN THE PIPELINE
+---------------------------
+  Called by run_pipeline.py AFTER features.py produces the sparse matrix.
+  Internally calls train.py to fit models, then:
+    → reports/evaluation_report.json
+    → reports/metrics_comparison.csv
+    → reports/{model}_confusion_matrix.png
+    → models/best_model.joblib + models/label_map.joblib
+
+KEY CONCEPTS FOR INTERVIEW
+--------------------------
+  1. Stratified split: preserves class balance in train and test (critical
+     for imbalanced or small datasets).
+  2. Macro F1 as selection criterion: averages F1 across classes equally —
+     better than accuracy when classes are hard to distinguish (e.g. medium).
+  3. Confusion matrix: rows = actual, cols = predicted; off-diagonal = errors.
+  4. predict_proba vs predict: API uses probabilities for confidence scores.
+  5. Sparse/dense handling repeated here and in api/app.py — AdaBoost/CatBoost
+     cannot consume scipy.sparse matrices directly.
 """
 
 from __future__ import annotations
@@ -36,13 +60,27 @@ from .utils import MODELS_DIR, RANDOM_STATE, REPORTS_DIR, save_json, setup_loggi
 logger = setup_logging(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Data splitting — reproducible 80/20 hold-out with stratification
+# ---------------------------------------------------------------------------
 def split_data(features: spmatrix, labels: list[str], test_size: float = 0.2):
     """
     Split features and labels into train (80%) and test (20%) sets.
 
-    stratify=labels keeps the same low/medium/high ratio in both sets.
-    This prevents a situation where, say, all "high" filings end up
-    only in the training set and the model never gets tested on them.
+    Uses stratify=labels when every class has ≥2 samples so that low/medium/high
+    proportions are preserved in both splits. Without stratification, a small
+    dataset might put all "high" filings in train only — inflating test scores.
+
+    Args:
+        features: Sparse matrix (n_samples × n_features) from features.py.
+        labels: Parallel list of "low" / "medium" / "high" strings.
+        test_size: Fraction held out for evaluation (default 0.2).
+
+    Returns:
+        Tuple of (x_train, x_test, y_train, y_test).
+
+    Interview Q: "Why not cross-validation?" — With ~280 samples, a single
+    stratified hold-out is simpler; k-fold would be a good extension.
     """
     indices = np.arange(features.shape[0])
     split_kwargs = {
@@ -50,7 +88,7 @@ def split_data(features: spmatrix, labels: list[str], test_size: float = 0.2):
         "random_state": RANDOM_STATE,
     }
     class_counts = pd.Series(labels).value_counts()
-    # Only stratify if every class has at least 2 samples (sklearn requirement)
+    # sklearn requires ≥2 samples per class for stratified splitting
     if class_counts.min() >= 2:
         split_kwargs["stratify"] = labels
 
@@ -62,12 +100,18 @@ def split_data(features: spmatrix, labels: list[str], test_size: float = 0.2):
     return x_train, x_test, y_train, y_test
 
 
+# ---------------------------------------------------------------------------
+# Prediction helpers — unify sparse/dense and proba/hard-label paths
+# ---------------------------------------------------------------------------
 def _predict_proba(model: TrainedModel, features: spmatrix) -> np.ndarray:
     """
-    Get class probabilities for each sample.
+    Return per-class probability matrix of shape (n_samples, n_classes).
 
-    Returns an array of shape (n_samples, 3) where each row sums to 1.0.
-    Example row: [0.05, 0.90, 0.05] → model is 90% confident it's "medium".
+    Each row sums to 1.0. Example: [0.05, 0.90, 0.05] → 90% confident
+    in class index 1 (which maps to a label via int_to_label).
+
+    Falls back to one-hot encoding if the estimator lacks predict_proba
+    (defensive — our three models all support it).
     """
     estimator = model.estimator
     if model.name in {"adaboost", "catboost"}:
@@ -88,13 +132,26 @@ def _predict_proba(model: TrainedModel, features: spmatrix) -> np.ndarray:
 
 
 def _predict_labels(model: TrainedModel, features: spmatrix, int_to_label: dict[int, str]) -> list[str]:
-    """Convert numeric predictions back to "low" / "medium" / "high" strings."""
+    """
+    Run hard classification and map integer predictions back to strings.
+
+    Args:
+        model: TrainedModel wrapper with fitted estimator.
+        features: Test-set feature matrix.
+        int_to_label: Reverse mapping {0: "high", 1: "low", ...}.
+
+    Returns:
+        List of predicted label strings parallel to feature rows.
+    """
     estimator = model.estimator
     matrix = features.toarray() if model.name in {"adaboost", "catboost"} else features
     preds = np.ravel(estimator.predict(matrix))
     return [int_to_label[int(pred)] for pred in preds]
 
 
+# ---------------------------------------------------------------------------
+# Per-model metric computation
+# ---------------------------------------------------------------------------
 def evaluate_model(
     model: TrainedModel,
     features: spmatrix,
@@ -104,15 +161,23 @@ def evaluate_model(
     """
     Compute all evaluation metrics for one model on the test set.
 
-    Metrics explained:
-      accuracy  — % of predictions that are correct overall
-      precision — when model says "high", how often is it actually high?
-      recall    — of all actual "high" cases, how many did the model catch?
-      F1        — harmonic mean of precision and recall (balanced score)
+    Metrics explained (common interview questions):
+      accuracy       — overall correct predictions / total
+      precision_macro — avg precision per class (TP / (TP+FP)), unweighted
+      recall_macro    — avg recall per class (TP / (TP+FN)), unweighted
+      f1_macro        — harmonic mean of precision and recall, per-class avg
+      mean_confidence — average of max(predict_proba) across test samples
+
+    Macro averaging treats low/medium/high equally — important when "medium"
+    is harder and has lower per-class F1 than "high".
+
+    Returns:
+        Dict with scalar metrics, classification_report string, confusion
+        matrix as nested list, and mean_confidence float.
     """
     y_pred = _predict_labels(model, features, int_to_label)
     proba = _predict_proba(model, features)
-    confidences = proba.max(axis=1)  # highest probability per sample
+    confidences = proba.max(axis=1)
 
     metrics = {
         "accuracy": float(accuracy_score(y_true, y_pred)),
@@ -126,6 +191,9 @@ def evaluate_model(
     return metrics
 
 
+# ---------------------------------------------------------------------------
+# Visualization — confusion matrix heatmaps for report slides
+# ---------------------------------------------------------------------------
 def plot_confusion_matrix(
     matrix: list[list[int]],
     labels: list[str],
@@ -133,10 +201,18 @@ def plot_confusion_matrix(
     output_path: Path,
 ) -> None:
     """
-    Draw and save a confusion matrix heatmap.
+    Draw and save a confusion matrix heatmap as PNG.
 
-    Rows = actual class, Columns = predicted class.
-    Diagonal cells = correct predictions. Off-diagonal = mistakes.
+    Interpretation for interviews:
+      - Diagonal cells = correct predictions for that class
+      - Row i, col j (i≠j) = actual class i misclassified as j
+      - Medium row often has spread across columns (ambiguous language)
+
+    Args:
+        matrix: 2D list of counts (from sklearn confusion_matrix).
+        labels: Class names in column/row order.
+        title: Plot title (e.g. "Xgboost Confusion Matrix").
+        output_path: Where to save the PNG (reports/ folder).
     """
     fig, ax = plt.subplots(figsize=(5, 4))
     im = ax.imshow(matrix, cmap="Blues")
@@ -155,23 +231,34 @@ def plot_confusion_matrix(
     plt.close(fig)
 
 
+# ---------------------------------------------------------------------------
+# Main evaluation orchestrator — called by run_pipeline.py
+# ---------------------------------------------------------------------------
 def run_evaluation(
     features: spmatrix,
     labels: list[str],
 ) -> tuple[dict, str, dict[int, str]]:
     """
-    Full evaluation pipeline — called by run_pipeline.py.
+    Full evaluation pipeline: split → train → score → report → save best model.
 
-    1. Split data 80/20
-    2. Train all 3 models on training set
-    3. Evaluate each on test set
-    4. Save reports and confusion matrix images
-    5. Pick best model by macro F1 and save as best_model.joblib
+    Workflow:
+      1. 80/20 stratified split via split_data()
+      2. train_models() on training portion only
+      3. evaluate_model() for each of xgboost, adaboost, catboost
+      4. Save JSON report, CSV comparison table, confusion matrix PNGs
+      5. Select winner by highest f1_macro; dump to best_model.joblib
+
+    Args:
+        features: Full-dataset sparse matrix from fit_features().
+        labels: Parallel list of risk_label strings.
 
     Returns:
-        report       — full evaluation dict (saved to evaluation_report.json)
-        best_model   — name of winning model, e.g. "xgboost"
-        int_to_label — integer → string label map
+        report       — nested dict saved to evaluation_report.json
+        best_model   — winning model name string (e.g. "xgboost")
+        int_to_label — integer → string label map for API inference
+
+    Interview Q: "Why macro F1 over accuracy?" — Accuracy can hide poor
+    performance on minority/hard classes; macro F1 forces balanced scrutiny.
     """
     x_train, x_test, y_train, y_test = split_data(features, labels)
     trained, int_to_label = train_models(x_train, y_train)
@@ -211,7 +298,7 @@ def run_evaluation(
     }
     save_json(REPORTS_DIR / "evaluation_report.json", report)
 
-    # Save a tidy CSV table for quick comparison in Excel / reports
+    # Tidy CSV for Excel / presentation tables
     metrics_table = pd.DataFrame(
         [
             {
@@ -226,7 +313,7 @@ def run_evaluation(
     )
     metrics_table.to_csv(REPORTS_DIR / "metrics_comparison.csv", index=False)
 
-    # Persist the winner for the API to load
+    # Persist winner for api/app.py to load at startup
     joblib.dump(trained[best_model], MODELS_DIR / "best_model.joblib")
     joblib.dump(int_to_label, MODELS_DIR / "label_map.joblib")
 

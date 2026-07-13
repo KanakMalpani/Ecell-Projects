@@ -1,9 +1,16 @@
 /**
- * Cart page — review items before checkout.
+ * Cart Page — /cart
  *
- * Reads cart state from CartContext (stored in localStorage).
- * Lets users change quantities, remove items, and proceed to /checkout.
+ * ROLE IN THE APP:
+ *   Review cart items from CartContext before checkout.
+ *   Shows order summary with free shipping threshold (₹999).
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Empty cart state with CTA to continue shopping
+ *   - Shipping: ₹99 flat fee, free above ₹999 (business rule in UI)
+ *   - Cart data from localStorage via CartContext (no server cart)
  */
+
 "use client";
 
 import Image from "next/image";
@@ -12,6 +19,7 @@ import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatCurrency } from "@/lib/utils";
 
+/** CartPage — line items, quantity controls, and order summary. */
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal, totalItems } = useCart();
 

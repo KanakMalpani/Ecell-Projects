@@ -1,12 +1,22 @@
 /**
- * Analytics API — admin dashboard statistics.
+ * Analytics API — GET /api/analytics
  *
- * GET /api/analytics  — admin only: revenue, orders, top products, low stock
+ * ROLE IN THE APP:
+ *   Powers the admin dashboard with aggregated store metrics.
+ *   Computes revenue, conversion rate, top products, low stock alerts.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Admin-only via requireAdmin() — sensitive business data
+ *   - Aggregations done in JS (not SQL GROUP BY) — fine for demo scale
+ *   - conversionRate = paidOrders / totalOrders * 100
+ *   - Production would use SQL aggregations or a dedicated analytics DB
  */
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
+/** GET — Admin only: return dashboard analytics metrics. */
 export async function GET() {
   try {
     await requireAdmin();

@@ -1,15 +1,22 @@
 /**
- * Categories API — list and create product categories.
+ * Categories API — /api/categories
  *
- * GET  /api/categories  — public list with product counts
- * POST /api/categories  — admin only: create category
+ * ROLE IN THE APP:
+ *   Lists product categories with product counts for shop sidebar filters.
+ *   Admin can create new categories via POST.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - _count: { select: { products: true } } is Prisma's aggregation shortcut
+ *   - Categories linked to products via foreign key (categoryId on Product)
  */
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { NextRequest } from "next/server";
 
+/** GET — List all categories with product counts (public). */
 export async function GET() {
   const categories = await prisma.category.findMany({
     include: { _count: { select: { products: true } } },
@@ -18,6 +25,7 @@ export async function GET() {
   return NextResponse.json(categories);
 }
 
+/** POST — Admin only: create a new product category. */
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin();

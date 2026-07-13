@@ -1,5 +1,42 @@
 """
 Module 2 — LangChain summarization chains and LangGraph agent workflows.
+
+WHAT THIS FILE DOES
+-------------------
+Two AI capabilities:
+  1. TicketSummarizationChain — LLM summarizes a ticket into key issues + urgency
+  2. AgentWorkflow — LangGraph 4-node pipeline for multi-turn customer queries
+
+LANGGRAPH STATE MACHINE (AgentWorkflow)
+---------------------------------------
+  load_context → route → generate → escalation → END
+
+  load_context  — pulls memory (short+long term) + open tickets for customer
+  route         — LLM classifies query: billing / technical / account / general
+  generate      — LLM drafts response with ticket ID citations
+  escalation    — flags urgent + low-confidence cases for supervisor handoff
+
+HALLUCINATION GUARD (_hallucination_guard)
+------------------------------------------
+  After LLM generates a response, three checks run:
+  1. Unsourced dollar amounts (e.g. "$500" not in context) → -0.15 confidence
+  2. Missing ticket citations when tickets exist → -0.10 confidence
+  3. Overconfident language ("guaranteed", "100%") → -0.05 confidence
+  Final confidence clamped to [0.3, 1.0].
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: Why LangGraph instead of a single LLM call?
+  A: Support queries need routing (billing vs technical), confidence-based
+     escalation, and auditable step-by-step processing.
+
+  Q: What is AgentState?
+  A: TypedDict holding all data passed between graph nodes — customer_id, query,
+     context, route_category, draft_response, confidence, hallucination_flags.
+
+  Q: How does memory integrate?
+  A: query_agent() appends user query to short-term memory before graph runs,
+     and assistant response after — enabling multi-turn conversations.
 """
 
 from __future__ import annotations

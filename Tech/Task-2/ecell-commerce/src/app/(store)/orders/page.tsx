@@ -1,9 +1,15 @@
 /**
- * Orders page — list of the logged-in user's past orders.
+ * Orders Page — /orders
  *
- * Fetches from /api/orders (returns only the current user's orders).
- * Each row links to /orders/[id] for full order detail and tracking.
+ * ROLE IN THE APP:
+ *   Lists the logged-in user's order history from GET /api/orders.
+ *   Each row links to /orders/[id] for tracking and detail.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Auth-gated: redirects to login if not authenticated
+ *   - statusColors map provides visual status badges (PENDING, SHIPPED, etc.)
  */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,6 +20,7 @@ import { useAuth } from "@/context/AuthContext";
 import { formatCurrency } from "@/lib/utils";
 import type { Order } from "@/types";
 
+/** Tailwind classes for order status badge colors. */
 const statusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
   CONFIRMED: "bg-blue-100 text-blue-700",
@@ -23,6 +30,7 @@ const statusColors: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-700",
 };
 
+/** OrdersPage — authenticated user's order list. */
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();

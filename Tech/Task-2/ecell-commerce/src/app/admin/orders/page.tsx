@@ -1,17 +1,25 @@
 /**
- * Admin orders page — view and manage all customer orders.
+ * Admin Orders Page — /admin/orders
  *
- * Fetches all orders from /api/orders (admin sees every order, not just their own).
- * Dropdown lets admin change order status (PENDING → DELIVERED, etc.).
+ * ROLE IN THE APP:
+ *   View all customer orders and update fulfillment status.
+ *   Admin GET /api/orders returns every order (not scoped to user).
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Status dropdown triggers PATCH /api/orders/[id] on change
+ *   - Shows customer name/email for each order (admin-only data)
  */
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import type { Order } from "@/types";
 
+/** All possible order statuses for the admin dropdown. */
 const statuses = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
 
+/** AdminOrdersPage — all orders with status management dropdown. */
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,13 +1,19 @@
 /**
- * Prisma database client — connects the app to SQLite.
+ * Prisma Database Client — singleton connection to SQLite.
  *
- * Prisma is an ORM (Object-Relational Mapper) that lets you query the
- * database using TypeScript instead of raw SQL.
+ * ROLE IN THE APP:
+ *   Every API route and Server Component imports `prisma` from here to query
+ *   the database. This is the only place PrismaClient is instantiated.
  *
- * This file creates a SINGLE shared PrismaClient instance (singleton pattern)
- * so Next.js hot-reload doesn't open a new DB connection on every refresh.
+ * KEY PATTERNS:
+ *   - Singleton on globalThis: survives Next.js hot-reload without new connections
+ *   - PrismaBetterSqlite3 adapter: Prisma 6 driver-adapter for SQLite
+ *   - Vercel workaround: copies dev.db → /tmp because serverless FS is read-only
  *
- * On Vercel (serverless): copies dev.db to /tmp because the filesystem is read-only.
+ * PI INTERVIEW TALKING POINTS:
+ *   - Why singleton? Each hot-reload would leak DB connections otherwise
+ *   - Driver adapters decouple Prisma engine from native binary (edge-ready)
+ *   - Production would typically use PostgreSQL + connection pooling (PgBouncer)
  */
 
 import { PrismaClient } from "@/generated/prisma/client";
@@ -21,7 +27,7 @@ const globalForPrisma = globalThis as unknown as {
   dbReady: boolean;
 };
 
-/** Resolve the SQLite database file path for local dev vs Vercel deployment. */
+/** Copy bundled SQLite DB to /tmp on Vercel's read-only filesystem. */
 function prepareDatabaseFile(): string {
   if (globalForPrisma.dbReady) {
     return process.env.VERCEL
@@ -45,6 +51,7 @@ function prepareDatabaseFile(): string {
   return process.env.DATABASE_URL ?? "file:./dev.db";
 }
 
+/** Instantiate PrismaClient with the Better-SQLite3 driver adapter. */
 function createPrismaClient() {
   const url = prepareDatabaseFile();
   const adapter = new PrismaBetterSqlite3({ url });

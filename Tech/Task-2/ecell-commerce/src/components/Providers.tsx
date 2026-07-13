@@ -1,9 +1,16 @@
 /**
- * Providers — wraps the app with all React Context providers.
+ * Providers — root-level React Context wrapper.
  *
- * Next.js Server Components cannot use Context, so we create this small
- * client component and import it in the root layout. AuthProvider must
- * wrap CartProvider so checkout can check login status.
+ * ROLE IN THE APP:
+ *   Next.js Server Components can't use Context, so this thin client component
+ *   is imported in layout.tsx to wrap the entire app tree.
+ *
+ * PROVIDER ORDER: AuthProvider → CartProvider
+ *   Auth must be outer so checkout can check login status before cart operations.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Composition pattern: one Providers file keeps layout.tsx as Server Component
+ *   - Provider nesting order matters when contexts depend on each other
  */
 "use client";
 

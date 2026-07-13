@@ -1,5 +1,39 @@
 """
 Module 2 — Per-customer interaction memory (short-term + long-term layers).
+
+WHAT THIS FILE DOES
+-------------------
+Stores and retrieves conversation history per customer so the LangGraph agent
+can answer multi-turn queries with context from prior interactions.
+
+TWO-LAYER MEMORY DESIGN
+-----------------------
+  Short-term (20 turns) — recent user/assistant messages stored as JSON list
+  Long-term (compressed) — LLM-summarized bullet points when short-term overflows
+
+OVERFLOW BEHAVIOR
+-----------------
+  When short_term exceeds 20 turns:
+  1. Oldest 5 turns are sent to LLM for compression
+  2. Compressed summary appended to long_term
+  3. Short-term trimmed to last 20 turns
+
+RETRIEVAL (retrieve_context)
+--------------------------
+  Concatenates: long_term summary + last N short-term turns + current query
+  Fed into LangGraph load_context node as agent context.
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: Why not just send all history to the LLM?
+  A: Context window limits — compressing old turns preserves key facts while
+     keeping recent detail, similar to how ChatGPT manages long conversations.
+
+  Q: Where is memory stored?
+  A: customer_memory table in SQLite (one row per customer_id).
+
+  Q: How does this enable cross-session memory?
+  A: Memory persists in DB across API calls — returning customers retain context.
 """
 
 from __future__ import annotations

@@ -1,5 +1,15 @@
 /**
- * Shared utility functions used across the e-commerce app.
+ * Shared Utility Functions — formatting and business logic helpers.
+ *
+ * ROLE IN THE APP:
+ *   Pure functions used across storefront pages, admin panel, and API routes.
+ *   Keeps display formatting and ID generation DRY and testable.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - formatCurrency uses Intl.NumberFormat for locale-aware ₹ formatting
+ *   - slugify creates URL-safe product slugs from human-readable names
+ *   - generateOrderNumber combines timestamp + random for unique, readable IDs
+ *   - isBannerActive encapsulates date-range + active-flag banner logic
  */
 
 /** Format a number as Indian Rupees, e.g. 1500 → "₹1,500" */

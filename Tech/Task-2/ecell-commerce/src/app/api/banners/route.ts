@@ -1,14 +1,20 @@
 /**
- * Banners API — promotional banner images for the homepage.
+ * Banners API — /api/banners
  *
- * GET  /api/banners       — active banners for store (or all if ?all=true, admin)
- * POST /api/banners       — admin only: create banner
+ * ROLE IN THE APP:
+ *   Homepage promotional banners. Public GET returns only active banners;
+ *   ?all=true requires admin to see inactive/expired ones in admin panel.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - isBannerActive() checks active flag + startDate/endDate window
+ *   - sortOrder controls display sequence on the homepage
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { isBannerActive } from "@/lib/utils";
 
+/** GET — List active banners (public) or all banners (admin ?all=true). */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const all = searchParams.get("all") === "true";
@@ -28,6 +34,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(active);
 }
 
+/** POST — Admin only: create a new promotional banner. */
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin();

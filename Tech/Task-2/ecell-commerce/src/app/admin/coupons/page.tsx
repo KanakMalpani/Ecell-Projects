@@ -1,15 +1,22 @@
 /**
- * Admin coupons page — create and manage discount codes.
+ * Admin Coupons Page — /admin/coupons
  *
- * Lists existing coupons and a form to add new ones (percentage or fixed discount).
- * POSTs to /api/coupons; codes are validated at checkout via /api/coupons/validate.
+ * ROLE IN THE APP:
+ *   Create and list discount codes. Table shows usage counts and expiry.
+ *   Codes validated at checkout via /api/coupons/validate.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - PERCENTAGE vs FIXED types affect discount calculation differently
+ *   - maxUses / usedCount track redemption limits
  */
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import type { Coupon } from "@/types";
 
+/** AdminCouponsPage — coupon creation form and usage table. */
 export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [showForm, setShowForm] = useState(false);

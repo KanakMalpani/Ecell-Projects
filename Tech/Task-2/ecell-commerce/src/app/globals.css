@@ -1,15 +1,33 @@
-/* Global styles — imported once in src/app/layout.tsx */
+/* =============================================================================
+ * Global Styles — E-Cell Commerce
+ * =============================================================================
+ *
+ * PURPOSE:
+ *   Single global stylesheet imported in src/app/layout.tsx. Sets up Tailwind
+ *   CSS v4, theme tokens, and base body styles for the entire storefront + admin.
+ *
+ * ROLE IN THE APP:
+ *   - @import "tailwindcss" enables all utility classes used in components
+ *   - :root CSS variables define the light-theme color palette
+ *   - @theme inline bridges CSS vars → Tailwind tokens (--color-background, etc.)
+ *   - Fonts (--font-geist-sans) are injected by next/font in layout.tsx
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Tailwind v4 uses @import instead of @tailwind directives (v3)
+ *   - @theme inline is the v4 way to extend the design system
+ *   - Component-level styling uses Tailwind classes; globals.css is minimal
+ * ============================================================================= */
 
-/* Tailwind v4: pulls in all utility classes (flex, p-4, etc.) */
+/* Tailwind v4: compiles all utility classes (flex, p-4, rounded-2xl, etc.) */
 @import "tailwindcss";
 
-/* CSS custom properties for light theme colors */
+/* Light-theme color palette as CSS custom properties */
 :root {
   --background: #fafafa;
   --foreground: #18181b;
 }
 
-/* Register theme tokens so Tailwind can use --color-background, --font-sans, etc. */
+/* Map CSS variables into Tailwind's theme system for use in class names */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -17,7 +35,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Base page background and text color */
+/* Base document styles applied to every page */
 body {
   background: var(--background);
   color: var(--foreground);

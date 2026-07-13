@@ -1,14 +1,21 @@
 /**
- * Single product API — get, update, or delete by slug.
+ * Single Product API — /api/products/[slug]
  *
- * GET    /api/products/[slug]  — public product detail
- * PUT    /api/products/[slug]  — admin only: update product
- * DELETE /api/products/[slug]  — admin only: delete product
+ * ROLE IN THE APP:
+ *   Product detail lookup by URL slug (not ID — SEO-friendly URLs).
+ *   Admin update/delete operations for catalog management.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Dynamic route params are Promise<{slug}> in Next.js 15 App Router
+ *   - Slug-based routing: /shop/wireless-headphones maps to this API
+ *   - include: { category: true } joins category data in one query
  */
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
+/** GET — Fetch a single product by slug (public). */
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -26,6 +33,7 @@ export async function GET(
   return NextResponse.json(product);
 }
 
+/** PUT — Admin only: update product fields by slug. */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -57,6 +65,7 @@ export async function PUT(
   }
 }
 
+/** DELETE — Admin only: remove product from catalog. */
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }

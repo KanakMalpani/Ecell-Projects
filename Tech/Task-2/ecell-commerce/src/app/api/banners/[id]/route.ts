@@ -1,13 +1,14 @@
 /**
- * Single banner API — update or delete a banner by ID.
+ * Single Banner API — /api/banners/[id]
  *
- * PUT    /api/banners/[id]  — admin only: update banner
- * DELETE /api/banners/[id]  — admin only: delete banner
+ * ROLE IN THE APP:
+ *   Admin update (toggle active, edit content) and delete for banner management.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
+/** PUT — Admin only: update banner fields or toggle active status. */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -37,6 +38,7 @@ export async function PUT(
   }
 }
 
+/** DELETE — Admin only: permanently remove a banner. */
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

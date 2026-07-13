@@ -1,9 +1,28 @@
 """
-Main pipeline — generate data, ingest, and optionally start API.
+Main pipeline — generate synthetic data, ingest into CRM, optionally start API.
 
-Usage:
-    python run_pipeline.py              # generate + ingest
-    python run_pipeline.py --serve      # generate + ingest + uvicorn
+WHAT THIS FILE DOES
+-------------------
+Orchestrates the full data setup in two steps:
+  Step 1: scripts/generate_data.py  → creates synthetic_crm_dataset.json
+  Step 2: scripts/run_ingest.py     → loads JSON into SQLite (data/crm.db)
+  Step 3 (optional): starts uvicorn API server
+
+USAGE
+-----
+  python run_pipeline.py              # generate + ingest only
+  python run_pipeline.py --serve      # generate + ingest + start API
+  python run_pipeline.py --skip-generate  # ingest existing JSON only
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: Why a pipeline script?
+  A: One command sets up the entire demo environment — evaluators don't need
+     to know individual script names.
+
+  Q: What data gets generated?
+  A: 520 customers, 1050 tickets, 2500 interactions over ~6 months.
+     Seeded random (seed=42) for reproducibility.
 """
 
 from __future__ import annotations

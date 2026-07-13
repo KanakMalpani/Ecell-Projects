@@ -1,14 +1,40 @@
 """
 Stage 2: convert cleaned text into TF-IDF and custom numeric features.
 
-Machine-learning models need NUMBERS, not English sentences.
-This module turns each document into a vector of 5006 numbers:
+WHAT THIS FILE DOES
+-------------------
+Transforms each preprocessed 10-K document from a string of words into a
+numeric feature vector suitable for sklearn/XGBoost classifiers.
 
-  - 5000 TF-IDF features  (how important is each word/phrase?)
-  - 6 custom features     (word counts, section lengths, ratios)
+WHY IT EXISTS
+-------------
+ML models cannot read English. TF-IDF captures lexical importance (which
+words/phrases distinguish documents), while custom features inject domain
+structure (section lengths, risk-section ratio) without relying solely on
+vocabulary overlap.
 
-The fitted vectorizer is saved so the API can transform new text the
-same way at prediction time.
+HOW IT FITS IN THE PIPELINE
+---------------------------
+  Input:  DataFrame from preprocess.py (column "text" + section columns)
+  Output: scipy.sparse.csr_matrix of shape (n_docs, 5006)
+          FeatureArtifacts saved to models/tfidf_vectorizer.joblib
+  Used by: run_pipeline.py (fit), evaluate.py (train), api/app.py (transform)
+
+Feature breakdown:
+  5000 columns — TF-IDF (unigrams + bigrams, max 5000 terms)
+  6 columns    — custom numeric (word counts + risk ratio)
+
+KEY CONCEPTS FOR INTERVIEW
+--------------------------
+  1. TF-IDF = Term Frequency × Inverse Document Frequency
+     - High TF-IDF: word is frequent in THIS doc but rare across corpus
+     - sublinear_tf=True uses log(1+tf) to dampen very common terms
+  2. N-grams (1,2): captures phrases like "going concern", not just "going"
+  3. min_df=2, max_df=0.95: vocabulary filtering to reduce noise/overfitting
+  4. Sparse matrices: 5006 × 283 docs mostly zeros — memory efficient
+  5. fit vs transform: fit learns vocabulary on training corpus; transform
+     applies fixed vocabulary at inference (critical for API consistency)
+  6. No label leakage: risk_score is NOT a feature — only text-derived signals
 """
 
 from __future__ import annotations
@@ -25,33 +51,56 @@ from .utils import MODELS_DIR, setup_logging
 
 logger = setup_logging(__name__)
 
-# TF-IDF settings — see sklearn docs for full parameter list
-TFIDF_MAX_FEATURES = 5000   # keep only the 5000 most informative terms
-TFIDF_NGRAM_RANGE = (1, 2)  # capture single words AND two-word phrases
+# ---------------------------------------------------------------------------
+# TF-IDF hyperparameters — tuned for SEC filing vocabulary size
+# ---------------------------------------------------------------------------
+TFIDF_MAX_FEATURES = 5000   # cap vocabulary at 5000 most informative terms
+TFIDF_NGRAM_RANGE = (1, 2)  # unigrams ("litigation") + bigrams ("going concern")
 
 
+# ---------------------------------------------------------------------------
+# FeatureArtifacts — serializable bundle for inference-time transformation
+# ---------------------------------------------------------------------------
 @dataclass
 class FeatureArtifacts:
     """
-    Container for everything needed to transform NEW text later.
+    Container for everything needed to transform NEW text at prediction time.
 
-    Saved to models/tfidf_vectorizer.joblib and loaded by the API.
+    Saved to models/tfidf_vectorizer.joblib and loaded by api/app.py on startup.
+    Without this artifact, the API cannot reproduce training-time feature values.
+
+    Attributes:
+        vectorizer: Fitted sklearn TfidfVectorizer (vocabulary + IDF weights).
+        feature_names: Human-readable column names (5000 terms + 6 custom).
     """
-    vectorizer: TfidfVectorizer  # the fitted TF-IDF transformer
-    feature_names: list[str]       # human-readable names for each column
+
+    vectorizer: TfidfVectorizer
+    feature_names: list[str]
 
 
+# ---------------------------------------------------------------------------
+# Custom (hand-crafted) features — domain knowledge beyond bag-of-words
+# ---------------------------------------------------------------------------
 def build_custom_features(frame: pd.DataFrame) -> np.ndarray:
     """
     Create 6 hand-crafted numeric features per document.
 
-    These give the model extra signals beyond word importance:
-      1. doc_word_count          — total words in the combined text
-      2. risk_section_words      — words in the Risk Factors section
-      3. business_section_words  — words in the Business section
-      4. mda_section_words       — words in the MD&A section
-      5. financial_section_words — words in the Financial Statements
-      6. risk_section_ratio      — risk words ÷ total words (higher = riskier)
+    These complement TF-IDF by encoding document structure:
+      1. doc_word_count          — total words in combined text
+      2. risk_section_words      — words in Risk Factors section alone
+      3. business_section_words  — words in Business section
+      4. mda_section_words       — words in MD&A section
+      5. financial_section_words — words in Financial Statements section
+      6. risk_section_ratio      — risk_section_words / doc_word_count
+
+    Interview insight: risk_section_ratio proxies "how much of this filing
+    is devoted to risk disclosure" — a simple but interpretable signal.
+
+    Args:
+        frame: DataFrame with "text" and section_* columns from preprocess.py.
+
+    Returns:
+        Dense numpy array of shape (n_docs, 6), dtype float.
     """
     word_counts = frame["text"].str.split().str.len().fillna(0)
     risk_len = frame["section_risk_factors"].str.split().str.len().fillna(0)
@@ -72,33 +121,43 @@ def build_custom_features(frame: pd.DataFrame) -> np.ndarray:
     return custom.astype(float)
 
 
+# ---------------------------------------------------------------------------
+# Training-time feature fitting — learns vocabulary from corpus
+# ---------------------------------------------------------------------------
 def fit_features(frame: pd.DataFrame) -> tuple[spmatrix, FeatureArtifacts]:
     """
-    Learn TF-IDF vocabulary from the training documents and build the
-    full feature matrix.
+    Learn TF-IDF vocabulary from documents and build the full feature matrix.
 
-    TF-IDF explained simply:
-      TF  = how often a word appears in THIS document
-      IDF = how rare the word is across ALL documents
-      TF-IDF = TF × IDF  →  rare important words score high
+    TF-IDF intuition for interviews:
+      TF  (term frequency)  — how often term t appears in document d
+      IDF (inverse doc freq) — log(N / df_t), penalizes terms in many docs
+      TF-IDF(t,d) = TF(t,d) × IDF(t)
+
+    Steps:
+      1. Fit TfidfVectorizer on frame["text"] (NLTK-preprocessed strings)
+      2. Build custom 6-column numeric matrix
+      3. Horizontally stack → sparse CSR matrix (5000 + 6 = 5006 columns)
+
+    Args:
+        frame: Preprocessed DataFrame with at least a "text" column.
 
     Returns:
-      combined  — sparse matrix of shape (n_documents, 5006)
-      artifacts — fitted vectorizer + feature names (saved for the API)
+        combined  — sparse matrix (n_docs × 5006)
+        artifacts — fitted vectorizer + feature names for persistence
     """
     logger.info("Fitting TF-IDF vectorizer on %s documents", len(frame))
     vectorizer = TfidfVectorizer(
         max_features=TFIDF_MAX_FEATURES,
         ngram_range=TFIDF_NGRAM_RANGE,
-        min_df=2,        # ignore words that appear in fewer than 2 docs
-        max_df=0.95,     # ignore words in >95% of docs (too common to help)
-        sublinear_tf=True,  # use log(1 + tf) to dampen very frequent words
+        min_df=2,           # drop terms appearing in <2 documents (typos/noise)
+        max_df=0.95,        # drop terms in >95% of docs (too common to discriminate)
+        sublinear_tf=True,  # apply 1 + log(tf) instead of raw count
     )
     # frame["text"] is already NLTK-preprocessed in preprocess.py clean_text()
     tfidf_matrix = vectorizer.fit_transform(frame["text"])
     custom_matrix = build_custom_features(frame)
 
-    # Horizontally stack TF-IDF (5000 cols) + custom (6 cols) = 5006 cols
+    # hstack combines sparse TF-IDF with dense custom features horizontally
     combined = csr_matrix(hstack([tfidf_matrix, custom_matrix]))
 
     names = list(vectorizer.get_feature_names_out()) + [
@@ -114,20 +173,40 @@ def fit_features(frame: pd.DataFrame) -> tuple[spmatrix, FeatureArtifacts]:
     return combined, artifacts
 
 
+# ---------------------------------------------------------------------------
+# Inference-time transformation — applies PRE-FITTED vectorizer
+# ---------------------------------------------------------------------------
 def transform_features(frame: pd.DataFrame, artifacts: FeatureArtifacts) -> spmatrix:
     """
-    Apply a PREVIOUSLY FITTED vectorizer to new documents.
+    Apply a previously fitted vectorizer to new documents (API inference path).
 
-    Used by the API at prediction time — must use the same vectorizer
-    that was saved during training, or the numbers won't match.
+    CRITICAL: Must use the same artifacts saved during training. Re-fitting
+    on a single prediction row would produce a different vocabulary → wrong
+    features → garbage predictions.
+
+    Args:
+        frame: One or more rows with "text" and section columns.
+        artifacts: Loaded FeatureArtifacts from tfidf_vectorizer.joblib.
+
+    Returns:
+        Sparse feature matrix ready for model.predict_proba().
     """
     tfidf_matrix = artifacts.vectorizer.transform(frame["text"])
     custom_matrix = build_custom_features(frame)
     return csr_matrix(hstack([tfidf_matrix, custom_matrix]))
 
 
+# ---------------------------------------------------------------------------
+# Artifact persistence — bridge between offline training and online serving
+# ---------------------------------------------------------------------------
 def save_feature_artifacts(artifacts: FeatureArtifacts, path=None) -> None:
-    """Persist the fitted vectorizer so the API can load it later."""
+    """
+    Persist fitted vectorizer to disk via joblib.
+
+    Args:
+        artifacts: FeatureArtifacts from fit_features().
+        path: Optional override; defaults to models/tfidf_vectorizer.joblib.
+    """
     path = path or MODELS_DIR / "tfidf_vectorizer.joblib"
     path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(artifacts, path)
@@ -135,6 +214,16 @@ def save_feature_artifacts(artifacts: FeatureArtifacts, path=None) -> None:
 
 
 def load_feature_artifacts(path=None) -> FeatureArtifacts:
-    """Load the saved vectorizer (called by api/app.py on startup)."""
+    """
+    Load saved vectorizer for API inference.
+
+    Called by api/app.py during server startup.
+
+    Args:
+        path: Optional override; defaults to models/tfidf_vectorizer.joblib.
+
+    Returns:
+        FeatureArtifacts ready for transform_features().
+    """
     path = path or MODELS_DIR / "tfidf_vectorizer.joblib"
     return joblib.load(path)

@@ -1,15 +1,42 @@
 """
-Stage 1: Document ingestion and text segmentation.
+=============================================================================
+Stage 1: Document Ingestion & Text Segmentation
+=============================================================================
 
-Reads all PDF/txt/md files from data/raw/, then:
-  1. Extracts text (pdfplumber for PDFs, plain read for txt/md)
-  2. Cleans boilerplate headers/footers
-  3. Detects document type (SOP, policy, compliance, etc.)
-  4. Splits text into logical sections (by headings)
-  5. Chunks each section into ~512-token pieces with overlap
-  6. Saves all chunks to data/processed/chunks.json
+PURPOSE
+-------
+Transforms raw enterprise documents (PDFs, plain text, Markdown) into a structured
+corpus of overlapping text chunks ready for embedding and semantic search.
 
-Each chunk becomes one searchable unit in the vector index (Stage 2).
+ROLE IN THE RAG PIPELINE
+------------------------
+  Input:  data/raw/*.pdf, *.txt, *.md
+  Output: data/processed/chunks.json
+
+  Each chunk is the atomic retrieval unit for Stages 2–5. Metadata attached here
+  (source_file, doc_type, section_hint) flows through to API source citations.
+
+PROCESSING PIPELINE (per document):
+  1. extract_text_from_file()  — pdfplumber (PDF) or UTF-8 read (txt/md)
+  2. clean_text()              — strip headers/footers via utils.py
+  3. detect_document_type()    — heuristic SOP/policy/compliance classification
+  4. split_into_sections()     — heading-aware logical segmentation
+  5. chunk_text()              — tiktoken token windows with overlap
+  6. Save all chunks → chunks.json
+
+INTERVIEW TALKING POINTS
+------------------------
+1. **Two-level segmentation:** Section split (semantic boundaries) THEN token
+   chunking (embedding model limits) — better than naive fixed-character splits.
+2. **tiktoken cl100k_base:** Token-accurate chunking aligned with GPT tokenizer
+   family; chunk_size=512 in settings.yaml means real LLM context units.
+3. **Overlap (64 tokens):** Prevents sentences at chunk boundaries from being
+   split across chunks with no retrieval hit — classic RAG engineering detail.
+4. **Heading heuristics:** ALL-CAPS lines, SOP/SYMPTOM prefixes, numbered sections
+   (1. PASSWORD REQUIREMENTS) — tuned for enterprise SOP/policy layout.
+5. **chunk_id format:** {filename_stem}__{index:04d} — stable, human-readable IDs
+   for ChromaDB and debugging.
+6. **min_chunk_chars filter:** Drops tiny fragments that add noise without information.
 """
 
 from __future__ import annotations
@@ -34,28 +61,36 @@ from src.utils import (
 logger = setup_logging("ingest")
 
 
+# -----------------------------------------------------------------------------
+# Data model — one searchable document chunk
+# -----------------------------------------------------------------------------
 @dataclass
 class DocumentChunk:
     """
-    One searchable piece of a document.
+    One searchable piece of a document — the atomic unit of the RAG index.
 
-    Stored in chunks.json and later embedded into ChromaDB.
+    Serialized to chunks.json, then embedded in Stage 2, retrieved in Stage 3.
     """
     chunk_id: str        # unique ID, e.g. "corporate_security_policy__0003"
-    source_file: str     # original filename
-    doc_type: str        # SOP, policy, compliance, etc.
-    section_hint: str    # heading this chunk came from
-    text: str            # the actual chunk text
-    token_count: int     # how many tokens (for monitoring)
-    chunk_index: int     # position within the source file
+    source_file: str     # original filename for citation
+    doc_type: str        # SOP, policy, compliance, etc. (from detect_document_type)
+    section_hint: str    # heading this chunk came from (for UI context)
+    text: str            # chunk body sent to embedding model
+    token_count: int     # tiktoken count (monitoring / context budgeting)
+    chunk_index: int     # sequential position within source file
 
 
+# -----------------------------------------------------------------------------
+# Text extraction — format-specific readers
+# -----------------------------------------------------------------------------
 def extract_text_from_file(path: Path) -> str:
     """
     Read raw text from a PDF, .txt, or .md file.
 
-    PDFs: uses pdfplumber to extract text page by page.
-    Text files: read directly as UTF-8.
+    PDFs: pdfplumber page-by-page extraction (handles layout better than PyPDF2).
+    Text: direct UTF-8 read with errors='ignore' for robustness.
+
+    Raises ValueError for unsupported extensions.
     """
     suffix = path.suffix.lower()
     if suffix == ".pdf":
@@ -70,9 +105,12 @@ def extract_text_from_file(path: Path) -> str:
     raise ValueError(f"Unsupported file type: {path.suffix}")
 
 
+# -----------------------------------------------------------------------------
+# Section splitting — heading-aware logical segmentation
+# -----------------------------------------------------------------------------
 def split_into_sections(text: str) -> list[tuple[str, str]]:
     """
-    Split document text into logical sections based on headings.
+    Split document text into logical sections based on heading heuristics.
 
     A line is treated as a heading if it is:
       - ALL CAPS and short (< 80 chars)
@@ -80,6 +118,7 @@ def split_into_sections(text: str) -> list[tuple[str, str]]:
       - A numbered heading like "1. PASSWORD REQUIREMENTS"
 
     Returns list of (heading, section_text) pairs.
+    Interview: preserves policy structure so chunks inherit meaningful section_hint.
     """
     blocks = [block.strip() for block in text.split("\n\n") if block.strip()]
     sections: list[tuple[str, str]] = []
@@ -110,6 +149,9 @@ def split_into_sections(text: str) -> list[tuple[str, str]]:
     return sections or [("general", text)]
 
 
+# -----------------------------------------------------------------------------
+# Token chunking — overlapping windows via tiktoken
+# -----------------------------------------------------------------------------
 def chunk_text(
     text: str,
     chunk_size: int,
@@ -120,12 +162,14 @@ def chunk_text(
     """
     Split a section into overlapping token-sized chunks.
 
-    Uses tiktoken (same tokenizer as GPT models) to count tokens accurately.
-    Overlap ensures sentences at chunk boundaries aren't lost.
+    Uses tiktoken (GPT-family tokenizer) for accurate token counting.
+    Overlap ensures sentences at chunk boundaries appear in multiple chunks.
 
     Example with chunk_size=512, overlap=64:
-      Chunk 1: tokens 0–512
-      Chunk 2: tokens 448–960  (64-token overlap with chunk 1)
+      Chunk 1: tokens [0, 512)
+      Chunk 2: tokens [448, 960)   — 64-token overlap with chunk 1
+
+    Chunks shorter than min_chunk_chars are discarded (noise reduction).
     """
     enc = tiktoken.get_encoding(encoding_name)
     tokens = enc.encode(text)
@@ -145,11 +189,16 @@ def chunk_text(
     return chunks
 
 
+# -----------------------------------------------------------------------------
+# ingest_corpus — process all documents in raw_dir
+# -----------------------------------------------------------------------------
 def ingest_corpus(raw_dir: Path, processed_dir: Path) -> list[DocumentChunk]:
     """
-    Process every document in raw_dir and return all chunks.
+    Process every document in raw_dir and persist chunks to processed_dir/chunks.json.
 
-    Saves output to processed_dir/chunks.json.
+    Raises FileNotFoundError if raw_dir contains no supported documents.
+
+    Returns the full list of DocumentChunk objects (also saved to disk).
     """
     config = load_config()
     chunk_cfg = config["chunking"]
@@ -209,8 +258,11 @@ def ingest_corpus(raw_dir: Path, processed_dir: Path) -> list[DocumentChunk]:
     return all_chunks
 
 
+# -----------------------------------------------------------------------------
+# CLI entry point
+# -----------------------------------------------------------------------------
 def main() -> None:
-    """CLI entry point: python scripts/run_ingest.py"""
+    """CLI entry point: python scripts/run_ingest.py [--raw-dir PATH]"""
     parser = argparse.ArgumentParser(description="Stage 1: ingest and chunk documents")
     parser.add_argument("--raw-dir", default=None, help="Override raw document directory")
     args = parser.parse_args()

@@ -1,11 +1,21 @@
 /**
- * Database seed script — populates dev.db with sample data for development.
+ * Database Seed Script — populates dev.db with demo data.
  *
- * Run with: npx prisma db seed
+ * ROLE IN THE APP:
+ *   Run via `npx prisma db seed` or during Render deploy build pipeline.
+ *   Wipes and recreates all tables with sample users, products, coupons, etc.
  *
- * Creates: admin + demo users, categories, products, coupons, banners,
- * addresses, and sample orders. Uses bcrypt to hash passwords.
+ * DEMO CREDENTIALS (printed to console):
+ *   Admin: admin@ecell.com / admin123
+ *   User:  user@ecell.com / user123
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - deleteMany order matters: child tables (OrderItem) before parents (Order)
+ *   - bcrypt.hash with cost 10 for password security
+ *   - createMany for bulk inserts (products, coupons, banners)
+ *   - Seed is idempotent: always clears first, then recreates
  */
+
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
@@ -15,6 +25,7 @@ const url = process.env.DATABASE_URL ?? "file:./dev.db";
 const adapter = new PrismaBetterSqlite3({ url });
 const prisma = new PrismaClient({ adapter });
 
+/** main — wipe tables and insert demo data for development/demo. */
 async function main() {
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
@@ -25,6 +36,7 @@ async function main() {
   await prisma.banner.deleteMany();
   await prisma.user.deleteMany();
 
+  // ── Users & Auth ──────────────────────────────────────────────────────────
   const adminPassword = await bcrypt.hash("admin123", 10);
   const userPassword = await bcrypt.hash("user123", 10);
 
@@ -58,6 +70,7 @@ async function main() {
     },
   });
 
+  // ── Categories & Products ─────────────────────────────────────────────────
   const categories = await Promise.all(
     [
       { name: "Electronics", slug: "electronics" },
@@ -168,6 +181,7 @@ async function main() {
 
   await prisma.product.createMany({ data: products });
 
+  // ── Coupons & Banners ─────────────────────────────────────────────────────
   await prisma.coupon.createMany({
     data: [
       {

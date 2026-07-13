@@ -1,12 +1,42 @@
 """
 Stage 3: train and compare XGBoost, AdaBoost, and CatBoost classifiers.
 
-Three different "gradient boosting" algorithms learn patterns from the
-TF-IDF feature matrix and predict one of three classes:
-  0 = low risk,  1 = medium risk,  2 = high risk
+WHAT THIS FILE DOES
+-------------------
+Defines three gradient-boosting ensemble classifiers, trains them on the
+TF-IDF feature matrix, and wraps each in a TrainedModel dataclass for
+serialization.
 
-After training, each model is saved individually. evaluate.py picks
-the best one and copies it to models/best_model.joblib.
+WHY IT EXISTS
+-------------
+Single-model pipelines are hard to defend in interviews. Training three
+well-known boosting algorithms on identical features lets evaluate.py pick
+the best empirically (macro F1) rather than assuming one algorithm wins.
+
+HOW IT FITS IN THE PIPELINE
+---------------------------
+  Called by evaluate.py (not run_pipeline.py directly) during run_evaluation().
+  Input:  sparse feature matrix + string labels from features.py / preprocess.py
+  Output: dict of TrainedModel objects; winner saved as best_model.joblib
+
+Model lineup:
+  XGBoost  — handles sparse matrices natively; typically best on text
+  AdaBoost — sklearn ensemble over shallow decision trees
+  CatBoost — Yandex gradient boosting; needs dense input
+
+KEY CONCEPTS FOR INTERVIEW
+--------------------------
+  1. Gradient boosting: sequentially adds weak learners (trees), each
+     correcting previous errors — powerful for tabular/sparse text features.
+  2. Label encoding: models need integers; mapping is deterministic via
+     RISK_LABELS order in utils.py.
+  3. Sparse vs dense: XGBoost.fit(sparse) works; AdaBoost/CatBoost need
+     .toarray() — memory trade-off on high-dimensional text.
+  4. Multi-class objective: objective="multi:softprob" gives probability
+     outputs used by API confidence scores.
+  5. Hyperparameters: n_estimators, max_depth, learning_rate — standard
+     interview topic; values here are reasonable defaults, not grid-searched.
+  6. TrainedModel wrapper: bundles estimator + metadata for clean joblib save.
 """
 
 from __future__ import annotations
@@ -26,24 +56,44 @@ from .utils import MODELS_DIR, RISK_LABELS, RANDOM_STATE, setup_logging
 logger = setup_logging(__name__)
 
 
+# ---------------------------------------------------------------------------
+# TrainedModel — serializable wrapper for estimator + metadata
+# ---------------------------------------------------------------------------
 @dataclass
 class TrainedModel:
     """
-    Wrapper that bundles a trained estimator with its metadata.
+    Bundle a fitted classifier with its name and label encoding.
 
-    Saved as a .joblib file so the API can load and use it directly.
+    Saved as .joblib and loaded by api/app.py. The API needs both the
+    estimator (for predict_proba) and name (to decide sparse vs dense).
+
+    Attributes:
+        name: "xgboost", "adaboost", or "catboost".
+        estimator: Fitted sklearn-compatible classifier object.
+        label_encoder: Maps "low"→int, "medium"→int, "high"→int.
     """
-    name: str                        # "xgboost", "adaboost", or "catboost"
-    estimator: object                # the actual sklearn / xgboost model
-    label_encoder: dict[str, int]    # maps "low"→0, "medium"→1, "high"→2
+
+    name: str
+    estimator: object
+    label_encoder: dict[str, int]
 
 
+# ---------------------------------------------------------------------------
+# Label encoding — strings to integers and back
+# ---------------------------------------------------------------------------
 def _label_maps(labels: list[str]) -> tuple[dict[str, int], dict[int, str]]:
     """
-    Convert text labels to integers (and back).
+    Build bidirectional mapping between string labels and integer class indices.
 
-    Models need numbers, not strings. We sort by RISK_LABELS order so
-    the mapping is always consistent: high=0, low=1, medium=2.
+    Classes sorted by RISK_LABELS order ("low", "medium", "high") so the
+    mapping is stable across runs regardless of which labels appear in data.
+
+    Args:
+        labels: List of "low" / "medium" / "high" from training set.
+
+    Returns:
+        to_int:   {"low": 0, "medium": 1, "high": 2} (example)
+        to_label: reverse map for prediction decoding
     """
     classes = sorted(set(labels), key=lambda value: RISK_LABELS.index(value))
     to_int = {label: index for index, label in enumerate(classes)}
@@ -51,25 +101,38 @@ def _label_maps(labels: list[str]) -> tuple[dict[str, int], dict[int, str]]:
     return to_int, to_label
 
 
+# ---------------------------------------------------------------------------
+# Model factory — instantiate untrained classifiers with default hyperparams
+# ---------------------------------------------------------------------------
 def build_models() -> dict[str, object]:
     """
     Create three untrained classifiers with sensible default hyperparameters.
 
-    All are "ensemble" methods — they combine many weak decision trees
-    to make a strong final prediction.
+    All are ensemble methods combining many decision trees into one strong
+    predictor. Hyperparameters chosen for small text-classification datasets
+    (~280 samples, 5006 features) — moderate depth, subsampling for
+    regularization.
+
+    Returns:
+        Dict mapping model name → unfitted estimator instance.
+
+    Interview talking points per model:
+      XGBoost  — industry standard for structured/sparse data; native sparse support
+      AdaBoost — reweights misclassified samples each round; shallow base trees
+      CatBoost — ordered boosting, robust defaults; slower, needs dense matrix
     """
     return {
-        # XGBoost: fast, handles sparse matrices natively — our winner
+        # XGBoost: fast, handles sparse matrices natively — our typical winner
         "xgboost": XGBClassifier(
             n_estimators=200,       # number of boosting rounds (trees)
-            max_depth=6,            # max depth of each tree
-            learning_rate=0.1,        # shrink each tree's contribution
-            subsample=0.9,          # use 90% of rows per tree (reduces overfitting)
-            colsample_bytree=0.8,   # use 80% of features per tree
-            objective="multi:softprob",  # 3-class classification with probabilities
-            eval_metric="mlogloss",
+            max_depth=6,            # max depth of each tree (controls complexity)
+            learning_rate=0.1,      # shrink each tree's contribution (eta)
+            subsample=0.9,          # row subsampling — reduces overfitting
+            colsample_bytree=0.8,   # feature subsampling per tree
+            objective="multi:softprob",  # 3-class softmax probabilities
+            eval_metric="mlogloss",      # multiclass log loss
             random_state=RANDOM_STATE,
-            n_jobs=-1,              # use all CPU cores
+            n_jobs=-1,              # parallel tree construction
         ),
         # AdaBoost: boosts a series of shallow decision trees
         "adaboost": AdaBoostClassifier(
@@ -78,32 +141,40 @@ def build_models() -> dict[str, object]:
             learning_rate=0.8,
             random_state=RANDOM_STATE,
         ),
-        # CatBoost: gradient boosting with built-in categorical support
+        # CatBoost: gradient boosting with ordered target statistics
         "catboost": CatBoostClassifier(
             iterations=200,
             depth=6,
             learning_rate=0.1,
             loss_function="MultiClass",
-            verbose=False,          # suppress training log spam
+            verbose=False,          # suppress per-iteration training logs
             random_seed=RANDOM_STATE,
         ),
     }
 
 
+# ---------------------------------------------------------------------------
+# Training loop — fit all three models on identical data
+# ---------------------------------------------------------------------------
 def train_models(
     features: spmatrix,
     labels: list[str],
 ) -> tuple[dict[str, TrainedModel], dict[int, str]]:
     """
-    Train all three models on the same feature matrix and label list.
+    Train all three boosting models on the same feature matrix and labels.
 
     Args:
-        features — sparse matrix from features.py (n_docs × 5006)
-        labels   — list of "low" / "medium" / "high" strings
+        features: Sparse CSR matrix (n_docs × 5006) from features.py.
+        labels:   Parallel list of "low" / "medium" / "high" strings.
 
     Returns:
-        trained     — dict mapping model name → TrainedModel wrapper
-        int_to_label — reverse map {0: "high", 1: "low", 2: "medium"}
+        trained:      Dict name → TrainedModel with fitted estimator.
+        int_to_label: Reverse label map for decoding predictions.
+
+    Note on sparse handling:
+        XGBoost accepts scipy.sparse directly (memory efficient).
+        CatBoost and AdaBoost require dense .toarray() — can be slow/RAM-heavy
+        at scale but manageable with ~280 × 5006 matrix.
     """
     label_to_int, int_to_label = _label_maps(labels)
     y = np.array([label_to_int[label] for label in labels])
@@ -130,12 +201,25 @@ def train_models(
     return trained, int_to_label
 
 
+# ---------------------------------------------------------------------------
+# Optional persistence — save individual models (evaluate.py saves best only)
+# ---------------------------------------------------------------------------
 def save_models(
     trained: dict[str, TrainedModel],
     int_to_label: dict[int, str],
     output_dir=None,
 ) -> None:
-    """Save each trained model and the label map to models/ folder."""
+    """
+    Save each trained model and the label map to the models/ folder.
+
+    evaluate.py saves only the best model; this function is available if you
+    want all three persisted for offline analysis.
+
+    Args:
+        trained: Output of train_models().
+        int_to_label: Integer → string label mapping.
+        output_dir: Target directory (defaults to MODELS_DIR).
+    """
     output_dir = output_dir or MODELS_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 

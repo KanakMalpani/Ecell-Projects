@@ -1,9 +1,21 @@
 /**
- * Home page — storefront landing (Server Component).
+ * Home Page — storefront landing page (Server Component).
  *
- * Fetches featured products and active banners directly from Prisma (no API call).
- * Renders hero, category links, product grid, testimonials, and trust badges.
+ * ROLE IN THE APP:
+ *   Default route (/). Fetches featured products + active banners directly from
+ *   Prisma (no API round-trip). Renders hero, promotions, product grid, testimonials.
+ *
+ * KEY PATTERNS:
+ *   - async Server Component: DB queries run on server, HTML sent pre-rendered
+ *   - Promise.all for parallel Prisma queries (featured products + banners)
+ *   - isBannerActive filters by active flag + startDate/endDate window
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Server Components can query DB directly — faster than client fetch waterfall
+ *   - ProductCard is a Client Component nested inside Server Component (valid in RSC)
+ *   - testimonials are hardcoded static data (not from DB) for demo purposes
  */
+
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Shield, Truck, RefreshCw, Star } from "lucide-react";
@@ -11,6 +23,7 @@ import ProductCard from "@/components/shop/ProductCard";
 import { prisma } from "@/lib/prisma";
 import { isBannerActive } from "@/lib/utils";
 
+/** Static testimonial data for the social proof section. */
 const testimonials = [
   {
     name: "Priya Sharma",
@@ -32,6 +45,7 @@ const testimonials = [
   },
 ];
 
+/** HomePage — fetches featured products and banners, renders landing sections. */
 export default async function HomePage() {
   const [products, allBanners] = await Promise.all([
     prisma.product.findMany({

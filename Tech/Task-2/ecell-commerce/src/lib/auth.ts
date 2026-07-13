@@ -1,15 +1,26 @@
 /**
  * Authentication helpers — JWT tokens, password hashing, session management.
  *
- * Auth flow:
+ * ROLE IN THE APP:
+ *   Central auth module used by API routes (requireAuth/requireAdmin) and
+ *   client session restore (/api/auth/me → getSession). Implements the
+ *   server-side half of JWT auth; the client half lives in AuthContext.
+ *
+ * AUTH FLOW:
  *   Register/Login → server hashes password → signs JWT → stores in httpOnly cookie
  *   Protected pages → read cookie → verify JWT → get user info
  *
- * Functions:
- *   hashPassword / verifyPassword — bcrypt password security
- *   signToken / verifyToken       — JWT create and validate
+ * KEY FUNCTIONS:
+ *   hashPassword / verifyPassword — bcrypt (cost factor 10) for password security
+ *   signToken / verifyToken       — JWT create and validate (7-day expiry)
  *   getSession                    — read current user from cookie (server-side)
- *   requireAuth / requireAdmin    — throw if not logged in / not admin
+ *   requireAuth / requireAdmin    — guard API routes; throw if unauthorized
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - httpOnly cookie prevents XSS from stealing the JWT (JS can't read it)
+ *   - bcrypt is slow by design → mitigates brute-force on stolen DB dumps
+ *   - requireAdmin enforces RBAC: USER vs ADMIN roles from Prisma enum
+ *   - Dev fallback JWT secret is blocked in production (fail-fast security)
  */
 
 import jwt from "jsonwebtoken";
@@ -27,6 +38,7 @@ export type AuthUser = {
   role: Role;  // "USER" or "ADMIN"
 };
 
+/** Resolve JWT signing secret; throws in production if JWT_SECRET is missing. */
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (secret) return secret;

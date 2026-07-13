@@ -1,20 +1,55 @@
 <!doctype html>
 <!--
-  GNN Logistics Inc. — Landing Page (Tech Task-1)
+  =============================================================================
+  GNN Logistics Inc. — Landing Page (E-Cell Tech Task-1)
+  =============================================================================
 
-  This is the single HTML file for the entire React app.
-  React mounts into <div id="root"> via main.jsx.
+  PURPOSE:
+    Single HTML shell for a React Single Page Application (SPA).
+    All visible UI is rendered client-side by React into <div id="root">.
+    This file never changes during navigation — only the React tree updates.
 
-  To run locally:
+  TECH STACK:
+    - React 19       — component-based UI library
+    - Vite           — dev server + production bundler (replaces Create React App)
+    - Tailwind CSS v4 — utility-first styling via @import in index.css
+    - Framer Motion  — scroll/hover animations in section components
+    - Deployed on Vercel — static site from `npm run build` output (dist/)
+
+  HOW IT WORKS:
+    1. Browser loads this HTML file
+    2. <script type="module" src="/src/main.jsx"> loads the React entry point
+    3. main.jsx calls createRoot() and renders <App /> into #root
+    4. Vite transforms JSX → JS and hot-reloads during development
+
+  PI INTERVIEW TALKING POINTS:
+    - Why SPA? Fast section navigation via anchor links (#about) without page reloads
+    - Why Vite over CRA? Faster HMR, native ES modules, smaller config
+    - SEO: meta description + semantic <title> for search engines and link previews
+    - viewport meta tag is critical for mobile-responsive Tailwind breakpoints
+    - type="module" enables ES6 import/export (required by Vite)
+
+  RUN LOCALLY:
     cd client && npm install && npm run dev
     Open http://localhost:5173
 -->
 <html lang="en">
   <head>
+    <!-- Character encoding — prevents garbled text for special characters -->
     <meta charset="UTF-8" />
+
+    <!-- Favicon shown in browser tab; served from /public/favicon.svg -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- viewport meta makes the page responsive on mobile devices -->
+
+    <!--
+      VIEWPORT META — makes the page responsive on phones/tablets.
+      width=device-width  → layout width matches screen width
+      initial-scale=1.0   → no zoom on load
+      Without this, mobile browsers render at ~980px and shrink the page.
+    -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO meta — appears in Google results and social link previews -->
     <meta
       name="description"
       content="GNN Logistics Inc. - Reliable freight, warehousing, and supply chain solutions across India."
@@ -22,9 +57,18 @@
     <title>GNN Logistics Inc. | Global Freight & Supply Chain</title>
   </head>
   <body>
-    <!-- React will render the entire app inside this div -->
+    <!--
+      MOUNT POINT — React takes over this empty div.
+      createRoot(document.getElementById("root")) in main.jsx targets this element.
+      Everything inside #root is managed by React's virtual DOM.
+    -->
     <div id="root"></div>
-    <!-- Vite loads our React entry point as an ES module -->
+
+    <!--
+      ENTRY SCRIPT — Vite resolves /src/main.jsx as an ES module.
+      In production, Vite bundles this into hashed JS files in dist/assets/.
+      defer behaviour is implicit for type="module" scripts.
+    -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

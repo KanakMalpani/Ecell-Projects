@@ -1,13 +1,19 @@
 /**
- * Addresses API — saved shipping addresses for logged-in users.
+ * Addresses API — /api/addresses
  *
- * GET  /api/addresses  — list user's addresses
- * POST /api/addresses  — add a new address
+ * ROLE IN THE APP:
+ *   Manages saved shipping addresses for logged-in users.
+ *   Checkout page loads these to pre-fill the shipping form.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - isDefault flag: only one default per user (updateMany clears others first)
+ *   - Addresses are user-scoped via userId from requireAuth()
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
+/** GET — List the authenticated user's saved addresses. */
 export async function GET() {
   try {
     const user = await requireAuth();
@@ -21,6 +27,7 @@ export async function GET() {
   }
 }
 
+/** POST — Add a new shipping address for the authenticated user. */
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();

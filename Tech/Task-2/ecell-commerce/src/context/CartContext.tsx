@@ -1,11 +1,19 @@
 /**
- * CartContext — shopping cart state persisted in localStorage.
+ * CartContext — shopping cart persisted in localStorage.
  *
- * Unlike auth (server cookie), the cart lives entirely in the browser
- * so guests can add items before logging in. Data syncs to localStorage
- * on every change so it survives page refreshes.
+ * ROLE IN THE APP:
+ *   Manages cart items entirely on the client so guests can shop before login.
+ *   Syncs to localStorage on every change. Checkout reads this state and sends
+ *   productId + quantity to POST /api/orders (server validates stock/prices).
  *
- * Use useCart() in any client component to read/add/remove cart items.
+ * KEY PATTERN:
+ *   Cart is NOT stored server-side — intentional for demo simplicity.
+ *   Stock caps enforced client-side (UX) and server-side (security).
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - localStorage vs cookie: cart doesn't need server access; larger payload OK
+ *   - addItem merges quantities for same productId; respects stock ceiling
+ *   - Server re-fetches product prices at checkout to prevent price tampering
  */
 "use client";
 
@@ -34,6 +42,7 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | null>(null);
 const CART_KEY = "ecell_cart"; // localStorage key for cart persistence
 
+/** CartProvider — restores cart from localStorage and exposes cart mutations. */
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loaded, setLoaded] = useState(false);

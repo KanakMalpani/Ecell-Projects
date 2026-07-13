@@ -1,15 +1,34 @@
 /**
- * Central content file for the GNN Logistics landing page.
+ * =============================================================================
+ * Central Data Layer — Content & Configuration (data/site.js)
+ * =============================================================================
  *
- * Keeping all text/data here means:
- *   - Components stay focused on layout and behaviour
- *   - A content editor only needs to edit THIS file
- *   - No hard-coded strings scattered across 7 component files
+ * PURPOSE:
+ *   Single source of truth for ALL static content on the landing page.
+ *   Separates "what to show" (data) from "how to show it" (components).
  *
- * Imported by: Navbar, Hero, About, Services, Testimonials, Contact, Footer
+ * ARCHITECTURE PATTERN — "Data-Driven UI":
+ *   Components import named exports and map over arrays to render UI.
+ *   A content editor can update copy here without touching JSX logic.
+ *
+ * CONSUMERS (which components import what):
+ *   company      → Navbar, Hero, About, Contact, Footer
+ *   services[]   → Services (mapped to cards)
+ *   testimonials[] → Testimonials (mapped to quote blocks)
+ *   navLinks[]   → Navbar, Footer (mapped to anchor links)
+ *   socialLinks[] → Footer (mapped to external links)
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Why a separate data file? DRY principle — nav links appear in Navbar AND Footer
+ *   - href values (#home, #about) must match section id="" attributes in components
+ *   - icon field in services uses string keys mapped to emojis in Services.jsx iconMap
+ *   - In production, this could be replaced by a CMS API or JSON fetched at runtime
+ *   - Named exports (not default) allow tree-shaking — only imported data gets bundled
  */
 
-// Company identity and contact details
+/* =========================================================================
+   COMPANY IDENTITY — brand name, tagline, mission, and contact details
+   ========================================================================= */
 export const company = {
   name: "GNN Logistics Inc.",
   tagline: "Moving business forward with precision and care.",
@@ -20,12 +39,15 @@ export const company = {
   address: "Warehouse District, Trichy - 620015, Tamil Nadu, India",
 };
 
-// Four services shown in the Services section grid
+/* =========================================================================
+   SERVICES — four offerings displayed as cards in Services.jsx
+   icon: string key looked up in Services.jsx iconMap → emoji
+   ========================================================================= */
 export const services = [
   {
     title: "Freight Forwarding",
     description: "Road, rail, and multimodal freight planning with live shipment visibility.",
-    icon: "truck",       // mapped to emoji in Services.jsx
+    icon: "truck",
   },
   {
     title: "Warehousing",
@@ -44,7 +66,9 @@ export const services = [
   },
 ];
 
-// Three client testimonials shown in the Testimonials section
+/* =========================================================================
+   TESTIMONIALS — client quotes for social proof in Testimonials.jsx
+   ========================================================================= */
 export const testimonials = [
   {
     quote:
@@ -66,14 +90,19 @@ export const testimonials = [
   },
 ];
 
-// Social media links in the Footer
+/* =========================================================================
+   SOCIAL LINKS — external URLs rendered in Footer "Follow Us" column
+   ========================================================================= */
 export const socialLinks = [
   { label: "LinkedIn", href: "https://linkedin.com" },
   { label: "Instagram", href: "https://instagram.com" },
   { label: "X", href: "https://x.com" },
 ];
 
-// Navigation menu items — hrefs match section id attributes for smooth scrolling
+/* =========================================================================
+   NAVIGATION LINKS — anchor hrefs for smooth-scroll section navigation
+   Each href must match a corresponding id="" on a <section> in a component
+   ========================================================================= */
 export const navLinks = [
   { label: "Home", href: "#home" },
   { label: "About", href: "#about" },

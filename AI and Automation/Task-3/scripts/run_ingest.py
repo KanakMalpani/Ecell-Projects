@@ -1,4 +1,24 @@
-"""Ingest synthetic dataset into CRM database."""
+"""
+Ingest synthetic dataset JSON into the CRM SQLite database.
+
+WHAT THIS FILE DOES
+-------------------
+  1. Reads data/synthetic_crm_dataset.json
+  2. Clears existing DB tables (clean re-ingest)
+  3. Calls crm_service.bulk_ingest() with deduplication
+
+INGESTION SAFEGUARDS
+--------------------
+  - Skip duplicate customer emails
+  - Skip duplicate ticket IDs
+  - Skip tickets/interactions for non-existent customers
+  - INSERT OR IGNORE for tickets prevents re-ingest crashes
+
+RUN
+---
+  python scripts/run_ingest.py
+  (or via: python run_pipeline.py)
+"""
 
 from __future__ import annotations
 

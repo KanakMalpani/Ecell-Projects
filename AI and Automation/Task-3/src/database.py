@@ -1,4 +1,39 @@
-"""SQLite persistence for CRM entities."""
+"""
+SQLite persistence layer for all CRM entities.
+
+WHAT THIS FILE DOES
+-------------------
+Manages the SQLite database connection, schema creation, and row-to-dict
+conversion helpers used by every module in Task-3.
+
+WHY SQLite (not PostgreSQL)?
+----------------------------
+Zero setup for evaluation — evaluators run `pip install` and it works.
+SYSTEM_REPORT.md notes PostgreSQL for production concurrency.
+
+TABLES CREATED (init_db)
+------------------------
+  customers        — 520+ profiles with engagement, cohort_id, behavioral_tags
+  tickets          — 1050+ support tickets with lifecycle status
+  interactions     — 2500+ timeline events (email, chat, call, portal)
+  customer_memory  — per-customer short-term + long-term AI conversation memory
+  audit_log        — every API request logged with latency and agent_id
+
+KEY PATTERNS
+------------
+  get_db()       — context manager; auto-commits on success, closes on exit
+  row_to_dict()  — converts sqlite3.Row to dict; parses JSON fields (tags, metadata)
+  now_iso()      — UTC ISO timestamp with Z suffix for all created_at fields
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: How do you prevent SQL injection?
+  A: All queries use parameterized placeholders (?), never string interpolation.
+
+  Q: Why check_same_thread=False?
+  A: FastAPI may serve requests from different threads; SQLite needs this flag
+     when sharing a connection across the thread pool.
+"""
 
 from __future__ import annotations
 

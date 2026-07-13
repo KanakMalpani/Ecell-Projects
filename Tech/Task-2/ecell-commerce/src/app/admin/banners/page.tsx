@@ -1,15 +1,23 @@
 /**
- * Admin banners page — manage homepage promotional banners.
+ * Admin Banners Page — /admin/banners
  *
- * Create, toggle active/inactive, and delete banner images.
- * Active banners with valid date ranges appear on the store home page.
+ * ROLE IN THE APP:
+ *   Manage homepage promotional banners. Toggle active/inactive,
+ *   set date ranges, and control sort order for display sequence.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - ?all=true on GET /api/banners shows inactive banners (admin only)
+ *   - toggleActive sends PUT with flipped active flag
+ *   - Banners filtered by isBannerActive() on the storefront home page
  */
+
 "use client";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Plus, Trash2, X } from "lucide-react";
 
+/** Local Banner type including admin-only fields (active, dates, sortOrder). */
 type Banner = {
   id: string;
   title: string;
@@ -22,6 +30,7 @@ type Banner = {
   sortOrder: number;
 };
 
+/** AdminBannersPage — banner CRUD with active toggle and preview cards. */
 export default function AdminBannersPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [showForm, setShowForm] = useState(false);

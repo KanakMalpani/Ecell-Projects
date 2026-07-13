@@ -1,28 +1,60 @@
 /**
- * Global styles and brand colour palette.
+ * =============================================================================
+ * Global Stylesheet — Tailwind Setup & Brand Design Tokens (index.css)
+ * =============================================================================
  *
- * Tailwind CSS v4 is imported here. Custom brand colours are defined
- * in the @theme block and used throughout components as:
- *   bg-gnn-navy, text-gnn-red, text-gnn-gold, bg-gnn-slate, etc.
+ * PURPOSE:
+ *   Single source of truth for global CSS: Tailwind framework import,
+ *   custom brand colours, base typography, and smooth-scroll behaviour.
+ *
+ * TECH STACK:
+ *   - Tailwind CSS v4  — @import "tailwindcss" replaces old @tailwind directives
+ *   - @theme block      — CSS custom properties become Tailwind utility classes
+ *
+ * BRAND COLOUR SYSTEM:
+ *   Defined once in @theme, used everywhere as Tailwind classes:
+ *     bg-gnn-navy    → dark blue backgrounds (navbar, hero, footer)
+ *     text-gnn-red   → primary accent / error text
+ *     bg-gnn-red     → CTA button backgrounds
+ *     text-gnn-gold  → highlights, stats, hover accents
+ *     bg-gnn-slate   → alternating light section backgrounds
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Tailwind v4 uses CSS-native @theme instead of tailwind.config.js
+ *   - Design tokens in one place → retheme entire site by changing 4 hex values
+ *   - scroll-behavior: smooth pairs with anchor links (#about) in Navbar
+ *   - body font-family uses system font stack (no web font download = faster load)
+ *   - Vite + @tailwindcss/vite plugin scans JSX for class names at build time
  */
+
+/* Import entire Tailwind framework — utilities, resets, and responsive breakpoints */
 @import "tailwindcss";
 
-/* Brand colour tokens — change these to retheme the whole site */
+/* =========================================================================
+   BRAND DESIGN TOKENS
+   These CSS variables auto-generate Tailwind classes like bg-gnn-navy, text-gnn-gold
+   ========================================================================= */
 @theme {
-  --color-gnn-navy: #0b1f3a;   /* dark blue — navbar, hero, footer backgrounds */
-  --color-gnn-red: #c62828;    /* red — primary CTA buttons */
-  --color-gnn-gold: #ffb800;   /* gold — accents, stats, highlights */
-  --color-gnn-slate: #f4f7fb;  /* light grey — alternating section backgrounds */
+  --color-gnn-navy: #0b1f3a;   /* Primary dark — headers, hero, footer backgrounds */
+  --color-gnn-red: #c62828;    /* Action colour — CTA buttons, validation errors */
+  --color-gnn-gold: #ffb800;   /* Accent colour — stats, badges, hover highlights */
+  --color-gnn-slate: #f4f7fb;  /* Surface colour — alternating section backgrounds */
 }
+
+/* =========================================================================
+   GLOBAL BASE STYLES
+   Applied to <html> and <body> — affect every page section
+   ========================================================================= */
 
 /* Smooth scroll when clicking navbar anchor links (#about, #services, etc.) */
 html {
   scroll-behavior: smooth;
 }
 
+/* Base typography and reset — Tailwind preflight handles most resets */
 body {
   margin: 0;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: #0b1f3a;
-  background: #ffffff;
+  color: #0b1f3a;       /* Default text colour matches gnn-navy brand */
+  background: #ffffff;   /* White page background; sections use bg-gnn-slate alternation */
 }

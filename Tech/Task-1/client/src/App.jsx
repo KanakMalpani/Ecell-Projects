@@ -1,12 +1,32 @@
 /**
- * Main page layout — stacks all sections vertically.
+ * =============================================================================
+ * Root Application Component — Page Layout Orchestrator (App.jsx)
+ * =============================================================================
  *
- * Each section is its own component file in ./components/.
- * Content (text, services, testimonials) lives in ./data/site.js
- * so you can change copy without touching component logic.
+ * PURPOSE:
+ *   Composes the entire single-page landing site by stacking section components
+ *   in reading order. No routing library needed — navigation uses anchor links.
  *
- * Page order (top to bottom):
- *   Navbar → Hero → About → Services → Testimonials → Contact → Footer
+ * ARCHITECTURE PATTERN:
+ *   - "Component composition" — each section is an isolated, reusable file
+ *   - "Separation of concerns" — content lives in data/site.js, layout in components/
+ *   - "Single-page layout" — one <main> with vertically stacked <section> elements
+ *
+ * PAGE STRUCTURE (top → bottom):
+ *   Navbar      — sticky header, mobile hamburger menu
+ *   Hero        — above-the-fold headline + CTAs + stats
+ *   About       — company overview + mission card
+ *   Services    — 4-card service grid
+ *   Testimonials — 3 client quote cards
+ *   Contact     — validated inquiry form (mailto: submission)
+ *   Footer      — links, social media, copyright
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Why no React Router? Single landing page — anchor links (#about) are simpler
+ *   - Fragment <> avoids extra DOM wrapper — Navbar outside <main> for semantics
+ *   - <main> wraps primary content; Navbar/Footer are siblings (accessibility best practice)
+ *   - Each section has id="..." matching navLinks hrefs in site.js for smooth scroll
+ *   - Adding a new section = import component + drop it in the JSX tree
  */
 import About from "./components/About";
 import Contact from "./components/Contact";
@@ -19,23 +39,28 @@ import Testimonials from "./components/Testimonials";
 export default function App() {
   return (
     <>
-      {/* Sticky navigation bar — always visible at the top */}
+      {/* NAVBAR — sticky header, always visible; uses position:sticky via Tailwind */}
       <Navbar />
 
+      {/* MAIN CONTENT — semantic HTML5 element for primary page content */}
       <main>
-        {/* Hero: big headline + CTA buttons + stats */}
+        {/* HERO — first impression section; id="home" is navbar "Home" anchor target */}
         <Hero />
-        {/* About: company mission and overview */}
+
+        {/* ABOUT — company mission and key stats; id="about" for nav link */}
         <About />
-        {/* Services: 4 service cards in a grid */}
+
+        {/* SERVICES — responsive card grid driven by services[] in site.js */}
         <Services />
-        {/* Testimonials: 3 client quote cards */}
+
+        {/* TESTIMONIALS — social proof section on dark navy background */}
         <Testimonials />
-        {/* Contact: inquiry form with validation */}
+
+        {/* CONTACT — form with client-side validation; id="contact" for CTA buttons */}
         <Contact />
       </main>
 
-      {/* Footer: links, social media, copyright */}
+      {/* FOOTER — site-wide links and copyright; outside <main> per HTML semantics */}
       <Footer />
     </>
   );

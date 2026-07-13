@@ -1,5 +1,48 @@
 """
 Module 3 — Cohort analysis: retention curves, churn scoring, report export.
+
+WHAT THIS FILE DOES
+-------------------
+Groups customers into cohorts, computes retention over 6 monthly periods,
+scores churn risk per customer, validates with logistic regression, and
+exports JSON/PDF reports.
+
+COHORT ID FORMULA
+-----------------
+  cohort_id = {acquisition_month}_{industry}_{product_tier}
+  Example: 2025-11_FinTech_Enterprise
+
+RETENTION CURVE
+---------------
+  For each cohort, 6 periods (M+0 to M+5):
+  - Customer "active" if: engagement_score - ticket_penalty >= threshold
+  - Threshold decays: max(25, 78 - period * 9)
+  - Retention rate = active / cohort_size
+
+CHURN HEURISTIC
+---------------
+  churn_prob = 0.5*(1 - engagement/100) + 0.3*min(tickets/15,1) + 0.2*(1 - tenure/365)
+  Flagged if churn_prob >= 0.6
+
+ML VALIDATION (train_churn_model)
+---------------------------------
+  Logistic regression on engagement, tickets, tenure.
+  Labels: top 25% heuristic scores = churn (75th percentile cutoff).
+  Reports precision, recall, F1 on 75/25 stratified train/test split.
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: Why cohort analysis?
+  A: Aggregate metrics hide segment problems — cohorts reveal whether Enterprise
+     FinTech customers retain better than Starter SaaS customers.
+
+  Q: Is the churn model production-ready?
+  A: It's a validation baseline using heuristic-derived labels. Real production
+     needs actual cancellation/churn event labels from billing data.
+
+  Q: What libraries power the analytics?
+  A: pandas for data manipulation, numpy for math, scikit-learn for logistic
+     regression, reportlab for PDF export.
 """
 
 from __future__ import annotations

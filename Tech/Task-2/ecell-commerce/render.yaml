@@ -1,3 +1,30 @@
+# =============================================================================
+# Render.com Deployment Blueprint — E-Cell Commerce
+# =============================================================================
+#
+# PURPOSE:
+#   Infrastructure-as-code config for deploying the Next.js e-commerce app to
+#   Render's free tier. Render reads this file to provision the web service,
+#   run the build pipeline, and inject environment variables.
+#
+# ROLE IN THE STACK:
+#   - Replaces manual dashboard setup with a reproducible deploy config
+#   - Ensures DB migrations + seed run on every deploy (fresh SQLite data)
+#   - Auto-generates JWT_SECRET so auth works in production without manual setup
+#
+# BUILD PIPELINE (in order):
+#   1. npm install          — install Node dependencies
+#   2. prisma migrate deploy — apply pending DB schema migrations
+#   3. tsx prisma/seed.ts   — populate dev.db with demo products/users
+#   4. npm run build        — Next.js production build
+#
+# PI INTERVIEW TALKING POINTS:
+#   - Why SQLite on Render? Simple demo deploy; file-based DB bundled with app
+#   - JWT_SECRET generateValue: Render creates a cryptographically random secret
+#   - NODE_VERSION 20: matches local dev for consistent Prisma/Next.js behavior
+#   - Trade-off: SQLite on ephemeral disk resets on redeploy unless persisted
+# =============================================================================
+
 services:
   - type: web
     name: ecell-commerce

@@ -1,5 +1,32 @@
 # -*- coding: utf-8 -*-
-"""Application configuration loaded from environment."""
+"""
+Application configuration — loads all settings from .env file.
+
+WHAT THIS FILE DOES
+-------------------
+Central config module: reads environment variables via python-dotenv and
+exposes them as module-level constants used across the entire Task-3 project.
+
+KEY SETTINGS
+------------
+  LLM_PROVIDER     — "ollama" (default) | "gemini" | falls back to mock
+  OLLAMA_BASE_URL  — http://127.0.0.1:11434 (local Ollama server)
+  OLLAMA_MODEL     — llama3:8b-instruct (8B parameter instruct-tuned model)
+  GEMINI_API_KEY   — optional Google Gemini API key for cloud inference
+  JWT_SECRET       — signs API bearer tokens; MUST change before production
+  ALLOWED_ORIGINS  — CORS whitelist (localhost:8002 by default)
+  DB_PATH          — data/crm.db (SQLite file location)
+  MAX_LIST_LIMIT   — caps list endpoints at 500 to prevent abuse
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: Why load config at import time?
+  A: Simple pattern for demo; all modules import from src.config directly.
+     Production would use pydantic-settings with validation.
+
+  Q: What happens with default JWT_SECRET?
+  A: Logger warns at startup — acceptable for local demo, blocked in production.
+"""
 
 from __future__ import annotations
 

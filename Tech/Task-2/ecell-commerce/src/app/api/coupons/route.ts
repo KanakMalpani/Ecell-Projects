@@ -1,13 +1,19 @@
 /**
- * Coupons API — admin management of discount codes.
+ * Coupons API — /api/coupons
  *
- * GET  /api/coupons  — admin only: list all coupons
- * POST /api/coupons  — admin only: create coupon
+ * ROLE IN THE APP:
+ *   Admin-only coupon CRUD. Codes are stored uppercase and validated at checkout.
+ *   Supports PERCENTAGE (e.g. 10% off) and FIXED (e.g. ₹200 off) discount types.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - minOrder, expiresAt, maxUses, usedCount form a complete coupon validation chain
+ *   - Actual discount calculation happens in /api/coupons/validate and POST /api/orders
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
+/** GET — Admin only: list all discount coupons. */
 export async function GET() {
   try {
     await requireAdmin();
@@ -18,6 +24,7 @@ export async function GET() {
   }
 }
 
+/** POST — Admin only: create a new discount coupon. */
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin();

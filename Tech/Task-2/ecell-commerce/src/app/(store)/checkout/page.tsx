@@ -1,10 +1,23 @@
 /**
- * Checkout page — place an order with shipping address and coupon.
+ * Checkout Page — /checkout
  *
- * Requires login (redirects to /login if not authenticated).
- * Loads saved addresses, validates coupon codes, and POSTs to /api/orders.
- * On success: clears cart and shows order confirmation.
+ * ROLE IN THE APP:
+ *   Final purchase step: shipping address, coupon, simulated payment.
+ *   Requires auth (redirects to /login?redirect=/checkout if not logged in).
+ *   POSTs to /api/orders on "Place Order"; clears cart on success.
+ *
+ * KEY FLOW:
+ *   1. Load saved addresses from /api/addresses
+ *   2. Validate coupon via /api/coupons/validate
+ *   3. POST /api/orders with items + shipping + coupon
+ *   4. Show order confirmation with order number
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Auth guard via useEffect redirect (client-side; API also enforces)
+ *   - Simulated payment: paymentMethod "simulated" → status CONFIRMED, PAID
+ *   - Three UI states: loading, empty cart, order complete, checkout form
  */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -16,6 +29,7 @@ import { useAuth } from "@/context/AuthContext";
 import { formatCurrency } from "@/lib/utils";
 import type { Address } from "@/types";
 
+/** CheckoutPage — shipping, coupon, payment, and order placement. */
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const { user, loading: authLoading } = useAuth();
@@ -71,6 +85,7 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
+  /** Validate coupon code against current subtotal via API. */
   const applyCoupon = async () => {
     setCouponError("");
     const res = await fetch("/api/coupons/validate", {
@@ -89,6 +104,7 @@ export default function CheckoutPage() {
     }
   };
 
+  /** Submit order to API, clear cart, and show confirmation. */
   const placeOrder = async () => {
     if (!shipping.street || !shipping.city || !shipping.state || !shipping.zipCode) {
       alert("Please fill in all shipping details");

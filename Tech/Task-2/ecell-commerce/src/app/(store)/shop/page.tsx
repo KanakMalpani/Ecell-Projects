@@ -1,10 +1,20 @@
 /**
- * Shop page — browse and filter all products (Client Component).
+ * Shop Page — /shop
  *
- * Reads URL search params (?search=, ?category=) and fetches from /api/products.
- * Sidebar filters by category; search box filters by product name.
- * Wrapped in Suspense because useSearchParams() requires it in Next.js App Router.
+ * ROLE IN THE APP:
+ *   Full product catalog with client-side filtering. Fetches from /api/products
+ *   and /api/categories based on URL search params and sidebar filter state.
+ *
+ * KEY PATTERNS:
+ *   - Client Component with useEffect data fetching (could migrate to Server Component)
+ *   - Suspense boundary for useSearchParams() requirement
+ *   - Skeleton loading state with animate-pulse placeholders
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Filters: category slug, text search, price range, sort order
+ *   - Debouncing search input would be a production improvement
  */
+
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
@@ -13,6 +23,7 @@ import ProductCard from "@/components/shop/ProductCard";
 import type { Product, Category } from "@/types";
 import { Search } from "lucide-react";
 
+/** ShopContent — catalog grid with sidebar filters. */
 function ShopContent() {
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
@@ -149,6 +160,7 @@ function ShopContent() {
   );
 }
 
+/** ShopPage — Suspense wrapper for ShopContent. */
 export default function ShopPage() {
   return (
     <Suspense fallback={<div className="p-10 text-center">Loading shop...</div>}>

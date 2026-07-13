@@ -1,9 +1,16 @@
 /**
- * Admin products page — CRUD for the product catalog.
+ * Admin Products Page — /admin/products
  *
- * Lists all products with edit/delete actions.
- * Modal form creates or updates products via POST/PUT to /api/products.
+ * ROLE IN THE APP:
+ *   Full CRUD for the product catalog. Table view with inline edit/delete.
+ *   Modal form for create/update via POST/PUT /api/products.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Optimistic UI pattern: reload after mutation (load() refetch)
+ *   - Slug used as API identifier (not UUID) for RESTful URLs
+ *   - Featured checkbox controls homepage visibility
  */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,6 +19,7 @@ import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { Product, Category } from "@/types";
 
+/** AdminProductsPage — product catalog CRUD with inline form. */
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);

@@ -1,14 +1,52 @@
 """
-FastAPI deployment — Stage 5.
+=============================================================================
+Enterprise RAG API — Stage 5 (Deployment)
+=============================================================================
 
-Serves the RAG pipeline as a REST API for live Q&A over company documents.
+PURPOSE
+-------
+Exposes the RAG pipeline as a production-ready REST API using FastAPI.
+This is the final stage of the five-stage Enterprise Knowledge Management
+pipeline: users send natural-language questions and receive grounded answers
+with source citations and confidence scores.
 
-Start (after running run_pipeline.py):
+ROLE IN THE RAG PIPELINE
+------------------------
+  Stage 1 (ingest)   → chunks.json
+  Stage 2 (embed)    → ChromaDB vector index
+  Stage 3 (orchestrate) → RAGPipeline.query()  ← THIS FILE CALLS THIS
+  Stage 4 (evaluate) → picks best pipeline mode (e.g. reranked_local)
+  Stage 5 (deploy)   → THIS FILE — serves /query over HTTP
+
+The API loads the winning pipeline mode from pipeline_state.json (written by
+run_pipeline.py after evaluation) and instantiates RAGPipeline once at startup
+(singleton pattern) so model loading cost is paid once, not per request.
+
+INTERVIEW TALKING POINTS
+------------------------
+1. **Why FastAPI?** Auto-generated OpenAPI/Swagger docs, Pydantic request
+   validation, async-ready, type hints — ideal for demo and production.
+2. **Singleton pipeline:** RAGPipeline loads SentenceTransformer + ChromaDB +
+   optional CrossEncoder at import time; amortizes ~2–5s cold-start across all
+   requests. Trade-off: cannot hot-swap pipeline mode without restart.
+3. **State hydration:** Reads models/state/pipeline_state.json to pick the
+   evaluation winner (reranked_local by default). Falls back to config default
+   if state file missing (e.g. --skip-eval run).
+4. **Error handling:** Internal exceptions become HTTP 500 with generic message
+   (no stack trace leakage). Logs full traceback server-side via logger.exception.
+5. **Response contract:** answer + confidence [0,1] + sources[] with similarity,
+   distance, excerpt — enables UI citation chips and trust indicators.
+6. **Anti-hallucination is upstream:** Guardrails live in orchestrate.py; API
+   is a thin transport layer — separation of concerns for testability.
+7. **Startup hook:** on_startup refreshes pipeline_state.json so deploy artifacts
+   stay consistent even if evaluation was run separately.
+
+START SERVER (after run_pipeline.py):
     uvicorn api.app:app --host 127.0.0.1 --port 8001 --reload
 
-Endpoints:
-    GET  /health  → server status + active pipeline name
-    POST /query   → ask a question, get answer + sources + confidence
+ENDPOINTS:
+    GET  /health  → liveness + active pipeline name
+    POST /query   → grounded Q&A with sources
 
 Swagger UI: http://127.0.0.1:8001/docs
 """
@@ -29,7 +67,11 @@ logger = logging.getLogger("api")
 config = load_config()
 state_path = resolve_path(config["paths"]["state_dir"]) / "pipeline_state.json"
 
-# Load the best pipeline mode saved by run_pipeline.py (e.g. "reranked_local")
+# ---------------------------------------------------------------------------
+# Pipeline bootstrap — load evaluation winner once at module import
+# ---------------------------------------------------------------------------
+# Interview note: This runs before uvicorn accepts connections. If state file
+# exists, we trust Stage 4's recommended_pipeline; otherwise use YAML default.
 if state_path.exists():
     with state_path.open(encoding="utf-8") as handle:
         saved_state = json.load(handle)
@@ -37,9 +79,12 @@ if state_path.exists():
 else:
     ACTIVE_MODE = config["evaluation"]["default_pipeline"]
 
-# Create the RAG pipeline once at import time — reused for every request
+# Singleton RAGPipeline — reused for every /query request (models stay in RAM)
 pipeline = RAGPipeline(mode=ACTIVE_MODE)  # type: ignore[arg-type]
 
+# ---------------------------------------------------------------------------
+# FastAPI application metadata (appears in Swagger /docs)
+# ---------------------------------------------------------------------------
 app = FastAPI(
     title="Enterprise Knowledge RAG API",
     description=(
@@ -50,8 +95,16 @@ app = FastAPI(
 )
 
 
+# ---------------------------------------------------------------------------
+# Request/Response schemas (Pydantic) — contract for POST /query
+# ---------------------------------------------------------------------------
 class QueryRequest(BaseModel):
-    """What the client sends to POST /query."""
+    """
+    Incoming question payload for POST /query.
+
+    Interview note: min_length=3 prevents empty/trivial queries; max_length=2000
+    caps token cost sent to the LLM. Validation happens before pipeline.query().
+    """
     query: str = Field(
         ...,
         min_length=3,
@@ -61,7 +114,13 @@ class QueryRequest(BaseModel):
 
 
 class SourceItem(BaseModel):
-    """One source citation in the response."""
+    """
+    One retrieved chunk citation returned to the client.
+
+    similarity: 1 - cosine_distance (higher = better match)
+    distance:   raw ChromaDB cosine distance (lower = better match)
+    excerpt:    first ~240 chars of chunk — enough for UI preview without full text
+    """
     source_file: str
     doc_type: str
     section_hint: str
@@ -71,7 +130,13 @@ class SourceItem(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """What the API returns after processing a question."""
+    """
+    Complete RAG response envelope.
+
+    confidence: derived from retrieval similarity (see orchestrate._compute_confidence)
+    pipeline:   which mode answered (local_llm, reranked_local, extractive, …)
+    latency_ms: end-to-end wall time including retrieval + LLM
+    """
     answer: str
     confidence: float = Field(..., ge=0.0, le=1.0)
     sources: list[SourceItem]
@@ -79,9 +144,17 @@ class QueryResponse(BaseModel):
     latency_ms: float | None = None
 
 
+# ---------------------------------------------------------------------------
+# Route handlers
+# ---------------------------------------------------------------------------
 @app.get("/health")
 def health() -> dict[str, Any]:
-    """Liveness check — confirms server is running and which pipeline is active."""
+    """
+    Liveness/readiness probe for load balancers and demo checks.
+
+    Returns active_pipeline so operators know which RAG mode is serving traffic
+    without triggering a full query (no LLM cost).
+    """
     return {
         "status": "ok",
         "active_pipeline": ACTIVE_MODE,
@@ -91,7 +164,12 @@ def health() -> dict[str, Any]:
 @app.post("/query", response_model=QueryResponse)
 def query_endpoint(request: QueryRequest) -> QueryResponse:
     """
-    Ask a natural language question about the enterprise document corpus.
+    Main RAG endpoint — ask a question, get a grounded answer.
+
+    Flow:
+      1. Strip whitespace from query
+      2. Delegate to RAGPipeline.query() (retrieve → rerank → LLM → guardrails)
+      3. Map QueryResult dataclass → QueryResponse Pydantic model
 
     Example request:
         {"query": "What is the minimum password length?"}
@@ -104,6 +182,9 @@ def query_endpoint(request: QueryRequest) -> QueryResponse:
           "pipeline": "reranked_local",
           "latency_ms": 4200.0
         }
+
+    Interview note: We catch all exceptions and return HTTP 500 — never expose
+    internal errors to clients (security + UX). Full traceback logged server-side.
     """
     try:
         result = pipeline.query(request.query.strip())
@@ -124,7 +205,15 @@ def query_endpoint(request: QueryRequest) -> QueryResponse:
     )
 
 
+# ---------------------------------------------------------------------------
+# Lifecycle hooks
+# ---------------------------------------------------------------------------
 @app.on_event("startup")
 def on_startup() -> None:
-    """Refresh pipeline_state.json on server start."""
+    """
+    Refresh pipeline_state.json when the server boots.
+
+    Ensures deploy artifacts reflect the currently loaded ACTIVE_MODE even if
+    evaluation was run in a separate process before uvicorn started.
+    """
     save_pipeline_state(ACTIVE_MODE)  # type: ignore[arg-type]

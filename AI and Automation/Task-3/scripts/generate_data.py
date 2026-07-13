@@ -1,11 +1,24 @@
 """
-Generate synthetic CRM dataset using LLM-assisted templates.
+Generate synthetic CRM dataset using Faker + optional LLM enhancement.
 
-Produces 500+ customers, 1000+ tickets, 6+ months of interactions.
-Uses Gemini/Ollama when available; falls back to Faker + rule templates.
+WHAT THIS FILE DOES
+-------------------
+Creates the full demo dataset saved to data/synthetic_crm_dataset.json:
+  - 520 customers across 6 industries × 3 product tiers
+  - 1050 tickets with realistic titles, statuses, CSAT scores
+  - 2500 interactions (email, chat, call, portal) over ~6 months
 
-Run:
-    python scripts/generate_data.py
+GENERATION STRATEGY
+-------------------
+  Customers: Faker names/companies, random engagement 15-95, tenure from acq date
+  Tickets:   First 20 descriptions LLM-enhanced; rest use templates (speed)
+  Interactions: 40% linked to a ticket; random channel and event type
+  Seeded: random.seed(42) + Faker.seed(42) for reproducibility
+
+RUN
+---
+  python scripts/generate_data.py
+  (or via: python run_pipeline.py)
 """
 
 from __future__ import annotations

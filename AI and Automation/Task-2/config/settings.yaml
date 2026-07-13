@@ -1,46 +1,104 @@
-# RAG pipeline configuration — edit this file to tune the system.
+# =============================================================================
+# Enterprise RAG Pipeline Configuration (Task-2)
+# =============================================================================
+#
+# PURPOSE
+#   Central tuning file for the entire five-stage RAG system. Every module
+#   (ingest, embed, orchestrate, evaluate, api) reads this via utils.load_config().
+#
+# ROLE IN RAG PIPELINE
+#   Single source of truth for paths, chunking, embedding model, retrieval
+#   depth, LLM provider, evaluation defaults, and anti-hallucination thresholds.
+#   Changing values here propagates without code edits — good for A/B tuning.
+#
+# INTERVIEW TALKING POINTS
+#   1. Separation of config from code — ops can tune chunk_size or top_k without
+#      redeploying Python; supports experimentation in PI discussions.
+#   2. All paths relative to project root — portable across machines/CI.
+#   3. chunk_overlap prevents boundary information loss (classic RAG pitfall).
+#   4. similarity_threshold + min_context_similarity are two-stage filtering:
+#      retrieval gate vs. abstention gate (defense in depth).
+#   5. temperature: 0.1 — low randomness for factual enterprise Q&A.
+#   6. default_pipeline: reranked_local — cross-encoder rerank beats raw vector
+#      search on precision-critical policy/SOP questions.
+#
 # All paths are relative to the Task-2 project root.
 
+# -----------------------------------------------------------------------------
+# paths — filesystem layout for each pipeline stage's inputs/outputs
+# -----------------------------------------------------------------------------
 paths:
-  raw_dir: data/raw              # drop PDF/txt files here before ingesting
-  processed_dir: data/processed  # chunks.json saved here after Stage 1
-  vector_store_dir: models/vector_store  # ChromaDB index on disk
-  state_dir: models/state        # pipeline_state.json, index_state.json
-  reports_dir: reports           # evaluation metrics and charts
+  raw_dir: data/raw              # Stage 1 input: drop PDF/txt/md files here before ingesting
+  processed_dir: data/processed  # Stage 1 output: chunks.json saved here
+  vector_store_dir: models/vector_store  # Stage 2 output: ChromaDB persistent index on disk
+  state_dir: models/state        # Runtime state: pipeline_state.json, index_state.json
+  reports_dir: reports           # Stage 4 output: evaluation metrics, CSV, PNG charts
 
+# -----------------------------------------------------------------------------
+# chunking — controls how documents are split for embedding (Stage 1)
+# -----------------------------------------------------------------------------
+# Interview: 512 tokens ≈ 1–2 paragraphs; overlap preserves sentences at edges.
 chunking:
-  chunk_size: 512        # max tokens per chunk (via tiktoken cl100k_base)
-  chunk_overlap: 64      # overlapping tokens between consecutive chunks
-  min_chunk_chars: 100   # discard chunks shorter than this
+  chunk_size: 512        # max tokens per chunk (tiktoken cl100k_base — same family as GPT)
+  chunk_overlap: 64      # overlapping tokens between consecutive chunks (continuity)
+  min_chunk_chars: 100   # discard tiny fragments that add noise to the index
 
+# -----------------------------------------------------------------------------
+# embedding — sentence-transformer model and batching (Stage 2)
+# -----------------------------------------------------------------------------
+# Interview: all-MiniLM-L6-v2 is 384-dim, fast, runs fully local; good baseline
+# for semantic search over enterprise docs without GPU requirement.
 embedding:
-  model_name: sentence-transformers/all-MiniLM-L6-v2  # local embedding model
-  batch_size: 32         # chunks encoded per batch (tune for your RAM)
+  model_name: sentence-transformers/all-MiniLM-L6-v2  # local HuggingFace embedding model
+  batch_size: 32         # chunks encoded per forward pass (tune for available RAM)
 
+# -----------------------------------------------------------------------------
+# retrieval — vector search breadth and rerank depth (Stage 3)
+# -----------------------------------------------------------------------------
+# Interview: top_k=8 cast wide net; rerank_top_k=4 narrows to best chunks for LLM.
+# similarity_threshold filters low-confidence hits before LLM sees them.
 retrieval:
-  top_k: 8               # initial vector search candidates from ChromaDB
-  rerank_top_k: 4        # chunks passed to LLM after cross-encoder reranking
+  top_k: 8               # initial ChromaDB candidates (recall-oriented)
+  rerank_top_k: 4        # chunks passed to LLM after cross-encoder reranking (precision)
   similarity_threshold: 0.25  # discard chunks below this cosine similarity
 
+# -----------------------------------------------------------------------------
+# llm — generation backend (Stage 3)
+# -----------------------------------------------------------------------------
+# Interview: Ollama = fully local, no API keys, data stays on-prem (enterprise requirement).
+# Gemini path exists for cloud fallback when provider: gemini and API key set.
 llm:
-  provider: ollama       # "ollama" (local, default) or "gemini" (cloud, needs API key)
+  provider: ollama       # "ollama" (local, default) or "gemini" (cloud, needs GEMINI_API_KEY)
   ollama_model: qwen2.5:7b          # pull with: ollama pull qwen2.5:7b
   ollama_base_url: http://localhost:11434
   ollama_timeout_seconds: 120
-  temperature: 0.1       # low = more deterministic, factual answers
+  temperature: 0.1       # low = deterministic, factual answers (reduce hallucination)
   max_output_tokens: 512
 
+# -----------------------------------------------------------------------------
+# evaluation — benchmark harness settings (Stage 4)
+# -----------------------------------------------------------------------------
 evaluation:
-  eval_questions_file: data/eval_questions.json
-  default_pipeline: reranked_local  # used if --skip-eval is passed
+  eval_questions_file: data/eval_questions.json  # gold Q&A set with expected keywords
+  default_pipeline: reranked_local  # fallback when run_pipeline.py --skip-eval is used
 
+# -----------------------------------------------------------------------------
+# anti_hallucination — guardrails enforced in orchestrate.py (Stage 3)
+# -----------------------------------------------------------------------------
+# Interview: context-only system prompt + mandatory abstention phrase + source
+# citations in API response = trust layer for enterprise knowledge assistants.
 anti_hallucination:
   require_source_citation: true
   abstain_phrase: "I cannot find sufficient information in the provided documents to answer this question."
   min_context_similarity: 0.30
-  max_context_tokens: 3000  # max tokens of retrieved context sent to LLM
+  max_context_tokens: 3000  # cap context window sent to LLM (cost + focus)
 
+# -----------------------------------------------------------------------------
+# preprocessing — NLTK query normalization before embedding (Stage 3)
+# -----------------------------------------------------------------------------
+# Interview: preprocess queries, NOT document chunks — preserves full vocabulary
+# in the index for embedding quality; stop-word removal on queries improves match.
 preprocessing:
   remove_stopwords: true   # NLTK English stop-word list (not hardcoded)
-  lemmatize: true          # WordNet lemmatization before query embedding
+  lemmatize: true          # WordNet lemmatization (e.g. "policies" → "policy")
   min_token_length: 2      # drop single-char tokens after tokenization

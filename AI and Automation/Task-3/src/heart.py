@@ -1,5 +1,38 @@
 """
 Module 4 — Google HEART framework metrics from live CRM data.
+
+WHAT THIS FILE DOES
+-------------------
+Computes all 5 dimensions of Google's HEART UX measurement framework
+adapted for CRM product health — all metrics recompute from live SQLite
+data on every API call (not cached or hardcoded).
+
+HEART DIMENSIONS
+----------------
+  H — Happiness    : avg CSAT on resolved tickets; NPS proxy from engagement tiers
+  E — Engagement   : active customers (engagement≥30), ticket open rate, interaction depth
+  A — Adoption     : AI-assisted ticket rate, onboarding completion, memory usage
+  R — Retention    : monthly retention (engagement≥25), churn flags, avg lifespan
+  T — Task Success : resolution rate, FCR proxy, escalation rate, AI vs human ratio
+
+WHY HEART (not just churn rate)?
+--------------------------------
+  Churn alone doesn't tell you WHY customers leave. HEART gives a balanced
+  view: are customers happy (H), using the product (E), adopting AI features (A),
+  staying (R), and succeeding at their tasks (T)?
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: What is NPS proxy here?
+  A: (promoters - detractors) / N × 100, where promoter = engagement≥70,
+     detractor = engagement<40. True NPS requires survey data.
+
+  Q: What is FCR proxy?
+  A: First Contact Resolution — non-escalated resolutions / total tickets.
+     True FCR needs per-interaction tracking.
+
+  Q: How is this exposed to users?
+  A: GET /api/v1/heart API endpoint + live Chart.js dashboard at /dashboard.
 """
 
 from __future__ import annotations

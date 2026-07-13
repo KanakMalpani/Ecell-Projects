@@ -1,9 +1,17 @@
 /**
- * Shared TypeScript types for the E-Cell Store frontend.
+ * Shared TypeScript Types — frontend data contracts.
  *
- * These types describe the shape of data returned by API routes.
- * They mirror the Prisma database models but are simplified for the UI.
- * Import them with: import type { Product } from "@/types"
+ * ROLE IN THE APP:
+ *   Defines the shape of JSON returned by API routes for type-safe UI code.
+ *   These are simplified views of Prisma models — they omit sensitive fields
+ *   (e.g. password) and flatten nested relations for component props.
+ *
+ * USAGE: import type { Product, Order } from "@/types"
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Separating API response types from Prisma types decouples UI from DB schema
+ *   - `type` imports are erased at compile time (zero runtime cost)
+ *   - Optional fields (category?, _count?) reflect Prisma `include` variations
  */
 
 // ─── Product & Category ───────────────────────────────────────────────────────

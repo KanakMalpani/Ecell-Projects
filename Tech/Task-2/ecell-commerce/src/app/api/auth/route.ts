@@ -1,13 +1,19 @@
 /**
- * Auth API — register, login, and logout.
+ * Auth API Route — /api/auth
  *
- * Next.js App Router API route: src/app/api/auth/route.ts → /api/auth
+ * ROLE IN THE APP:
+ *   Handles user registration, login, and logout. Sets/clears the httpOnly
+ *   JWT cookie (ecell_token) that authenticates all subsequent API requests.
  *
- * POST   /api/auth  — register a new user (creates account + sets JWT cookie)
- * PUT    /api/auth  — login with email/password (sets JWT cookie)
- * DELETE /api/auth  — logout (clears JWT cookie)
+ * ENDPOINTS:
+ *   POST   — register new user (Zod-validated body → bcrypt hash → JWT cookie)
+ *   PUT    — login with email/password (verify hash → JWT cookie)
+ *   DELETE — logout (clear cookie with maxAge: 0)
  *
- * The JWT is stored in an httpOnly cookie so JavaScript can't steal it.
+ * PI INTERVIEW TALKING POINTS:
+ *   - Zod schemas validate request bodies before touching the database
+ *   - Cookie flags: httpOnly (anti-XSS), secure (HTTPS only in prod), sameSite: lax
+ *   - Password never returned in JSON response — only { id, email, name, role }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -20,6 +26,7 @@ const registerSchema = z.object({
   password: z.string().min(6),
 });
 
+/** POST — Register a new user account and set auth cookie. */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -73,6 +80,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+/** PUT — Authenticate existing user and set auth cookie. */
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
@@ -111,6 +119,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+/** DELETE — Clear auth cookie to log out. */
 export async function DELETE() {
   const response = NextResponse.json({ success: true });
   response.cookies.set(TOKEN_COOKIE, "", { httpOnly: true, maxAge: 0, path: "/" });

@@ -1,9 +1,16 @@
 /**
- * Product detail page — single product view at /shop/[slug].
+ * Product Detail Page — /shop/[slug]
  *
- * Fetches product by slug from /api/products/[slug].
- * Shows image, price, stock, quantity picker, and "Add to Cart" button.
+ * ROLE IN THE APP:
+ *   Single product view with quantity picker and Add to Cart.
+ *   Fetches product by slug from /api/products/[slug].
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Dynamic route [slug] enables SEO-friendly URLs
+ *   - Stock badge color coding: green (>10), amber (1-10), red (0)
+ *   - Quantity capped at available stock on both +/- buttons
  */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -15,6 +22,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import type { Product } from "@/types";
 
+/** ProductDetailPage — fetches and displays a single product. */
 export default function ProductDetailPage() {
   const params = useParams();
   const slug = params.slug as string;

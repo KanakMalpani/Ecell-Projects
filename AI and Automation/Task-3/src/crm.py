@@ -1,7 +1,43 @@
 """
-Module 1 — Customer & Ticket Management.
+Module 1 — Customer & Ticket Management (CRM Core).
 
-CRUD, lifecycle states, segmentation, timeline views, bulk ingestion.
+WHAT THIS FILE DOES
+-------------------
+Central business logic for the E-Cell CRM: customer profiles, support tickets,
+interaction timelines, customer segmentation, and bulk dataset ingestion.
+
+WHY IT EXISTS
+-------------
+Every other module (AI agents, cohort analysis, HEART metrics) reads from the
+same customer/ticket data. This file is the single source of truth for CRM
+operations — the API layer (api/app.py) delegates here instead of writing SQL.
+
+HOW IT FITS IN THE PIPELINE
+---------------------------
+  scripts/generate_data.py → scripts/run_ingest.py → bulk_ingest() → SQLite
+  api/app.py → crm_service.create_customer() / create_ticket() / etc.
+
+KEY FEATURES
+------------
+  - Ticket lifecycle state machine (Open → In Progress → Escalated → Resolved → Closed)
+  - Auto cohort assignment: cohort_id = {month}_{industry}_{product_tier}
+  - Customer segmentation: high_value, at_risk, new, standard
+  - Agent routing: billing/technical/account/general → specialist agent IDs
+  - Bulk ingest with email + ticket ID deduplication
+
+PI INTERVIEW TALKING POINTS
+---------------------------
+  Q: How do you prevent invalid ticket status jumps?
+  A: VALID_TRANSITIONS dict enforces allowed edges; update_ticket_status() raises
+     ValueError if transition is illegal (e.g. Closed → Escalated).
+
+  Q: What is a cohort_id?
+  A: Auto-assigned on customer creation from acquisition month + industry + tier.
+     Used by cohort.py for retention curves and churn scoring.
+
+  Q: Why denormalize ticket_count on customers?
+  A: Avoids COUNT(*) on every segmentation/churn query; incremented atomically
+     when a ticket is created.
 """
 
 from __future__ import annotations

@@ -1,4 +1,23 @@
-# Start E-Cell Task 3 CRM demo (Windows)
+# Start E-Cell Task 3 CRM demo (Windows PowerShell)
+#
+# WHAT THIS SCRIPT DOES
+# ---------------------
+# One-command demo launcher for evaluation day:
+#   1. Creates .venv if missing and installs requirements.txt
+#   2. Copies .env.example → .env if .env doesn't exist
+#   3. Runs data pipeline if crm.db is missing
+#   4. Starts uvicorn API on http://127.0.0.1:8002
+#
+# USAGE
+# -----
+#   .\start_demo.ps1
+#
+# THEN OPEN
+# ---------
+#   Swagger:   http://127.0.0.1:8002/docs
+#   Dashboard: http://127.0.0.1:8002/dashboard
+#   Login:     analytics1 / analytics123  (dashboard)
+#              agent1 / agent123           (API operations)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 

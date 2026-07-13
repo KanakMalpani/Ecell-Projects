@@ -1,13 +1,20 @@
 /**
- * Single order API — view or update one order.
+ * Single Order API — /api/orders/[id]
  *
- * GET   /api/orders/[id]  — order detail (owner or admin only)
- * PATCH /api/orders/[id]  — admin only: update status/paymentStatus
+ * ROLE IN THE APP:
+ *   Order detail view and admin status management.
+ *   Authorization: owner can view own order; admin can view/update any.
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Row-level security: session.role !== "ADMIN" && order.userId !== session.id
+ *   - PATCH allows admin to advance order through fulfillment pipeline
+ *   - Order status enum: PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, requireAdmin } from "@/lib/auth";
 
+/** GET — Fetch order detail (owner or admin only). */
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -37,6 +44,7 @@ export async function GET(
   return NextResponse.json(order);
 }
 
+/** PATCH — Admin only: update order status or payment status. */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

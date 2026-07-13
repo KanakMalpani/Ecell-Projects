@@ -2,6 +2,10 @@
 
 Repository for E-Cell domain induction work, organized by vertical and task.
 
+**File structure:** See [REPOSITORY_STRUCTURE.md](REPOSITORY_STRUCTURE.md) for the full directory tree.
+
+**Learning / interview prep:** Every source file contains in-depth explanatory comments at the top (and before major functions). Open any `.py`, `.ts`, `.tsx`, `.jsx`, or `.html` file and read the header comment block first.
+
 ## Structure
 
 ```

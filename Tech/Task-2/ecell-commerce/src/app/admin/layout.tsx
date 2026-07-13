@@ -1,11 +1,18 @@
 /**
- * Admin Layout — sidebar navigation for the admin dashboard.
+ * Admin Layout — /admin/*
  *
- * Protects all /admin/* routes: redirects non-admins to /login.
- * Uses a fixed left sidebar with links to Analytics, Products, Orders,
- * Coupons, and Banners. Children render in the main content area.
+ * ROLE IN THE APP:
+ *   Protects all admin routes with role-based access control.
+ *   Renders fixed sidebar navigation; children are the admin page content.
  *
- * "use client" because it checks auth state and uses useRouter/usePathname.
+ * KEY PATTERNS:
+ *   - Client-side auth guard: redirects non-admins to /login?redirect=/admin
+ *   - Separate layout from storefront (no Navbar/Footer — sidebar instead)
+ *   - usePathname() highlights active sidebar link
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Defense in depth: layout checks role + API routes use requireAdmin()
+ *   - Returns null while redirecting to avoid flash of admin content
  */
 "use client";
 
@@ -23,6 +30,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
+/** Sidebar navigation items for the admin panel. */
 const navItems = [
   { href: "/admin", label: "Analytics", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: Package },
@@ -31,6 +39,7 @@ const navItems = [
   { href: "/admin/banners", label: "Banners", icon: ImageIcon },
 ];
 
+/** AdminLayout — sidebar chrome with RBAC guard for all /admin routes. */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();

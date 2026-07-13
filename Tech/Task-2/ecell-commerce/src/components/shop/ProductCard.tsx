@@ -1,9 +1,18 @@
 /**
- * ProductCard — reusable card showing a product in grid listings.
+ * ProductCard — reusable product tile for grid listings.
  *
- * Displays image, category, name, price, stock badges, and an "Add" button
- * that pushes the item into CartContext. Clicking the image/name navigates
- * to the product detail page at /shop/[slug].
+ * ROLE IN THE APP:
+ *   Used on Home page (featured products) and Shop page (filtered catalog).
+ *   Handles "Add to Cart" via CartContext and links to /shop/[slug] for details.
+ *
+ * KEY PATTERNS:
+ *   - next/image with fill + sizes for responsive image optimization
+ *   - Stock badges: "Low stock" (≤5), overlay for out-of-stock
+ *   - Disabled Add button when stock === 0
+ *
+ * PI INTERVIEW TALKING POINTS:
+ *   - Presentational + interactive hybrid: link navigation + cart action
+ *   - ProductCard receives typed Product prop from @/types (not Prisma type)
  */
 "use client";
 
@@ -14,6 +23,7 @@ import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 
+/** ProductCard — renders product image, info, and add-to-cart button. */
 export default function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
 
